@@ -73,6 +73,22 @@ target_include_directories(gradient_descent_node PUBLIC
   ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
+add_executable(obstacle_avoider_node src/obstacle_avoider.cpp)
+ament_target_dependencies(obstacle_avoider_node
+  rclcpp
+  visualization_msgs
+  geometry_msgs
+)
+
+install(TARGETS
+  obstacle_avoider_node
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+
+target_include_directories(obstacle_avoider_node PUBLIC
+  ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
 
 add_executable(trajectory_generator_node src/trajectory_generator.cpp)
 ament_target_dependencies(trajectory_generator_node
@@ -106,6 +122,7 @@ ament_target_dependencies(controller_node
   tf2
   tf2_ros
   tf2_geometry_msgs
+  visualization_msgs
 )
 
 install(TARGETS

@@ -12,6 +12,8 @@
 #include <limits>
 #include <memory>
 
+#include <visualization_msgs/msg/marker_array.hpp>
+
 
 
 namespace trajectory_controller
@@ -102,9 +104,16 @@ public:
         actual_path_pub_ = this->create_publisher<nav_msgs::msg::Path>(
       "/actual_path", 10);
         
-        odom_sub = this->create_subscription<nav_msgs::msg::Odometry>(
+        odom_sub_ = this->create_subscription<nav_msgs::msg::Odometry>(
             "/odom",10,
         [this](nav_msgs::msg::Odometry::SharedPtr msg){odomCallback(msg); });
+
+
+        path_sub_ = this->create_subscription<visualization_msgs::msg::MarkerArray>(
+      "/path_avoiding", 10,
+      [this](visualization_msgs::msg::MarkerArray::SharedPtr msg) {
+        pathCallback(msg); });
+
 
         RCLCPP_INFO(this->get_logger(),
             "Controller node started, Trajectory has %zu points", trajectory_.size());
@@ -126,11 +135,12 @@ private:
 
 
     //ROS Interfaces
-    rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr cmd_vel_pub_;
-    rclcpp::Publisher<std_msgs::msg::Float64MultiArray>::SharedPtr error_pub_;
+    rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr            cmd_vel_pub_;
+    rclcpp::Publisher<std_msgs::msg::Float64MultiArray>::SharedPtr     error_pub_;
     rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr                  actual_path_pub_;
-    rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odom_sub;
-
+    rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr           odom_sub_;
+    rclcpp::Subscription<visualization_msgs::msg::MarkerArray>::SharedPtr path_sub_;
+    bool path_received_{false};
 
     nav_msgs::msg::Path actual_path_msg_;
 
@@ -202,12 +212,74 @@ private:
         }
     }
 
+    void pathCallback(visualization_msgs::msg::MarkerArray::SharedPtr msg)
+  {
+    // Extract points from the LINE_STRIP marker
+    for (const auto& marker : msg->markers)
+    {
+      if (marker.type != visualization_msgs::msg::Marker::LINE_STRIP) continue;
 
+      std::vector<trajectory_controller::Point2D> path_points;
+      for (const auto& pt : marker.points) {
+        path_points.push_back({pt.x, pt.y});
+      }
+
+      if (path_points.size() < 2) continue;
+
+      // Rebuild trajectory from new path
+      trajectory_.clear();
+      closest_idx_ = 0;
+      goal_reached_ = false;
+
+      // Arc lengths
+      std::vector<double> arc(path_points.size(), 0.0);
+      for (size_t i = 1; i < path_points.size(); i++) {
+        double dx = path_points[i].x - path_points[i-1].x;
+        double dy = path_points[i].y - path_points[i-1].y;
+        arc[i] = arc[i-1] + std::sqrt(dx*dx + dy*dy);
+      }
+      double L = arc.back();
+
+      double t_acc = 0.0;
+      for (size_t i = 0; i < path_points.size(); i++)
+      {
+        trajectory_controller::TrajectoryPoint tp;
+        tp.x = path_points[i].x;
+        tp.y = path_points[i].y;
+        tp.theta = (i < path_points.size()-1)
+          ? std::atan2(path_points[i+1].y - path_points[i].y,
+                       path_points[i+1].x - path_points[i].x)
+          : (trajectory_.empty() ? 0.0 : trajectory_.back().theta);
+        double v_up   = std::sqrt(2.0 * 0.05 * arc[i]);
+        double v_down = std::sqrt(2.0 * 0.05 * (L - arc[i]));
+        tp.velocity   = std::max(std::min({v_max_, v_up, v_down}), 0.01);
+        if (i == 0) {
+          tp.time = 0.0;
+        } else {
+          double ds = arc[i] - arc[i-1];
+          double va = 0.5 * (trajectory_.back().velocity + tp.velocity);
+          t_acc += ds / va;
+          tp.time = t_acc;
+        }
+        trajectory_.push_back(tp);
+      }
+
+      path_received_ = true;
+      RCLCPP_INFO(this->get_logger(),
+        "Received new avoided path with %zu points", trajectory_.size());
+    }
+  }
 
     void odomCallback(nav_msgs::msg::Odometry::SharedPtr msg)
     {
         if(goal_reached_){
             publishZeroVelocity();
+            return;
+        }
+
+        if (!path_received_) {
+            RCLCPP_INFO_THROTTLE(this->get_logger(),
+                *this->get_clock(), 2000, "Waiting for avoided path...");
             return;
         }
 

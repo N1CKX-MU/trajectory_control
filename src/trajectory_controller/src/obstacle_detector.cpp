@@ -137,7 +137,7 @@ private:
     clusters.erase(
       std::remove_if(clusters.begin(), clusters.end(),
         [](const trajectory_controller::Cluster& c) {
-          return c.points.size() < 8;
+          return c.points.size() < 9;// Adjust threshold as needed
         }),
       clusters.end());
 

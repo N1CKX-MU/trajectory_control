@@ -9,7 +9,7 @@ export GAZEBO_MODEL_PATH=/usr/share/gazebo-11/models:/opt/ros/humble/share/turtl
 export XDG_RUNTIME_DIR=/tmp/runtime-root
 
 mkdir -p /tmp/runtime-root
-
+chmod 700 /tmp/runtime-root
 if [ -d /ros2_ws/src ]; then
     cd /ros2_ws
     rosdep install --from-paths src --ignore-src -r -y -q

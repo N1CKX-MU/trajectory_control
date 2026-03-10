@@ -17,6 +17,12 @@ struct TrajectoryPoint {
     double time;
 };
 
+struct DetectedObstacle {
+  double x{0.0};
+  double y{0.0};
+  double radius{0.0};
+};
+
 // Waypoints used by all nodes — single source of truth
 inline std::vector<Point2D> getDefaultWaypoints()
 {
