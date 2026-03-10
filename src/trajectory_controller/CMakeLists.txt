@@ -45,6 +45,17 @@ target_include_directories(catmullrom_node PUBLIC
 )
 
 
+add_executable(bezier_node src/bezier_node.cpp)
+ament_target_dependencies(bezier_node
+  rclcpp
+  visualization_msgs
+  geometry_msgs
+)
+
+target_include_directories(bezier_node PUBLIC
+  ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
+
 
 
 
@@ -52,6 +63,7 @@ target_include_directories(catmullrom_node PUBLIC
 install(TARGETS
   waypoints_node
   catmullrom_node
+  bezier_node
   DESTINATION lib/${PROJECT_NAME}
 )
 
