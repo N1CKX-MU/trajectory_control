@@ -99,6 +99,9 @@ public:
         error_pub_ = this->create_publisher<std_msgs::msg::Float64MultiArray>(
             "tracking_error",10);
 
+        actual_path_pub_ = this->create_publisher<nav_msgs::msg::Path>(
+      "/actual_path", 10);
+        
         odom_sub = this->create_subscription<nav_msgs::msg::Odometry>(
             "/odom",10,
         [this](nav_msgs::msg::Odometry::SharedPtr msg){odomCallback(msg); });
@@ -125,7 +128,11 @@ private:
     //ROS Interfaces
     rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr cmd_vel_pub_;
     rclcpp::Publisher<std_msgs::msg::Float64MultiArray>::SharedPtr error_pub_;
+    rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr                  actual_path_pub_;
     rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odom_sub;
+
+
+    nav_msgs::msg::Path actual_path_msg_;
 
     void buildTrajectory()
     {
@@ -275,6 +282,21 @@ private:
         std_msgs::msg::Float64MultiArray err_msg;
         err_msg.data = {cte, heading_error, v_cmd, omega_cmd};
         error_pub_->publish(err_msg);
+
+
+        // Append current position to actual path
+        actual_path_msg_.header.frame_id = "odom";
+        actual_path_msg_.header.stamp    = this->now();
+
+        geometry_msgs::msg::PoseStamped ps;
+        ps.header = actual_path_msg_.header;
+        ps.pose.position.x = rx;
+        ps.pose.position.y = ry;
+        ps.pose.position.z = 0.0;
+        ps.pose.orientation = msg->pose.pose.orientation;
+        actual_path_msg_.poses.push_back(ps);
+
+        actual_path_pub_->publish(actual_path_msg_);
     }
 
     void publishZeroVelocity()
