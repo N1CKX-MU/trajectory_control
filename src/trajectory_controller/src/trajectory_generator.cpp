@@ -133,7 +133,7 @@ class TrajectoryGeneratorNode : public rclcpp::Node
 public:
     TrajectoryGeneratorNode() : Node("trajectory_generator_node")
     {
-        waypoints_ = trajectory_controller::getDefaultWaypoints();
+        waypoints_ = trajectory_controller::getWaypoints(this);
 
         publisher_ = this->create_publisher<nav_msgs::msg::Path>("/trajectory_points", 10);
 

@@ -211,13 +211,25 @@ Visualization Manager:
       Enabled: true
       Name: MarkerArray
       Namespaces:
-        obstacles: true
+        {}
       Topic:
         Depth: 5
         Durability Policy: Volatile
         History Policy: Keep Last
         Reliability Policy: Reliable
         Value: /detected_obstacles
+      Value: true
+    - Class: rviz_default_plugins/MarkerArray
+      Enabled: true
+      Name: MarkerArray
+      Namespaces:
+        {}
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /path_avoiding
       Value: true
   Enabled: true
   Global Options:
@@ -265,7 +277,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz_default_plugins/Orbit
-      Distance: 4.196896553039551
+      Distance: 9.27800178527832
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -301,5 +313,5 @@ Window Geometry:
   Views:
     collapsed: false
   Width: 935
-  X: 511
-  Y: 109
+  X: 2512
+  Y: 134

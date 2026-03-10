@@ -1,0 +1,48 @@
+trajectory_controller:
+  ros__parameters:
+
+    # ── Waypoints ──────────────────────────────────────────────
+    # S-curve path in 6x4m arena
+    waypoints:
+      - [0.0, 0.0]
+      - [1.0, 0.5]
+      - [2.0, 2.0]
+      - [3.0, 2.5]
+      - [4.0, 1.5]
+      - [5.0, 0.5]
+      - [6.0, 1.0]
+
+    # ── Path Smoother ───────────────────────────────────────────
+    smoother:
+      samples_per_segment: 20     # points generated between each waypoint
+      tension: 0.5                # Catmull-Rom tension [0=loose, 1=tight]
+      bezier_tension: 0.25        # Bezier control point distance
+      gradient_alpha: 0.8         # gradient descent smoothness weight
+      gradient_learning_rate: 0.1
+      gradient_iterations: 500
+
+    # ── Trajectory Generator ────────────────────────────────────
+    trajectory:
+      max_velocity: 0.18          # m/s — Turtlebot3 Burger limit
+      acceleration: 0.05          # m/s² — trapezoidal ramp rate
+
+    # ── Pure Pursuit Controller ─────────────────────────────────
+    controller:
+      lookahead_gain: 1.5         # L = k * v
+      min_lookahead: 0.15         # metres
+      max_lookahead: 0.60         # metres
+      max_linear_vel: 0.18        # m/s
+      max_angular_vel: 2.84       # rad/s — Burger hardware limit
+      goal_tolerance: 0.10        # metres
+
+    # ── Obstacle Avoider ────────────────────────────────────────
+    obstacle_avoider:
+      safe_margin: 0.45           # metres beyond obstacle radius
+      alpha: 0.6                  # smoothness vs distance weight
+      learning_rate: 0.05
+      iterations: 800
+
+    # ── Obstacle Detector ───────────────────────────────────────
+    obstacle_detector:
+      cluster_threshold: 0.25     # metres — max gap within one cluster
+      min_cluster_points: 8       # discard clusters smaller than this

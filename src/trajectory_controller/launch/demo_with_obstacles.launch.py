@@ -83,11 +83,14 @@ def generate_launch_description():
     ])
 
     # Wait 8s for Gazebo + robot to be ready before starting controller
-    controller = TimerAction(period=8.0, actions=[
+    controller = TimerAction(period=14.0, actions=[
         Node(package='trajectory_controller',
              executable='controller_node',
              name='controller_node',
-             output='screen')
+             output='screen',
+             parameters=[os.path.join(
+                 get_package_share_directory('trajectory_controller'),
+                 'config', 'params.yaml')])
     ])
 
     rviz = TimerAction(period=5.0, actions=[
@@ -101,6 +104,20 @@ def generate_launch_description():
              output='screen')
     ])
 
+    detector = TimerAction(period=6.0, actions=[
+        Node(package='trajectory_controller',
+             executable='obstacle_detector_node',
+             name='obstacle_detector_node',
+             output='screen')
+    ])
+
+    avoider = TimerAction(period=7.0, actions=[
+        Node(package='trajectory_controller',
+             executable='obstacle_avoider_node',
+             name='obstacle_avoider_node',
+             output='screen')
+    ])
+
     return LaunchDescription([
         gazebo,
         gzclient,
@@ -111,6 +128,8 @@ def generate_launch_description():
         bezier,
         gradient,
         trajectory,
+        detector,
+        avoider,
         controller,
         rviz,
     ])

@@ -37,39 +37,98 @@ namespace trajectory_controller
     }
 
 
-    std::vector<Cluster> clusterPoints(
-        const std::vector<Point2D>& points,
-        double cluster_threshold = 0.2)
-    {
-        std::vector<Cluster> clusters;
-        std::vector<bool> visited(points.size(),false);
+    // std::vector<Cluster> clusterPoints(
+    //     const std::vector<Point2D>& points,
+    //     double cluster_threshold = 0.2)
+    // {
+    //     std::vector<Cluster> clusters;
+    //     std::vector<bool> visited(points.size(),false);
 
-        for(size_t i = 0 ; i < points.size();i++){
-            if(visited[i]) continue;
+    //     for(size_t i = 0 ; i < points.size();i++){
+    //         if(visited[i]) continue;
 
-            Cluster cluster;
-            cluster.points.push_back(points[i]);
-            visited[i] = true;
+    //         Cluster cluster;
+    //         cluster.points.push_back(points[i]);
+    //         visited[i] = true;
 
-            //Find all points within threshold and add to cluster
+    //         //Find all points within threshold and add to cluster
 
-            for(size_t j = i + 1;j < points.size(); j++){
-                if(visited[j]) continue;
+    //         for(size_t j = i + 1;j < points.size(); j++){
+    //             if(visited[j]) continue;
 
-                double dx = points[j].x - points[i].x;
-                double dy = points[j].y - points[i].y;
-                double d = std::sqrt(dx*dx + dy*dy);
+    //             double dx = points[j].x - points[i].x;
+    //             double dy = points[j].y - points[i].y;
+    //             double d = std::sqrt(dx*dx + dy*dy);
 
-                if(d < cluster_threshold){
-                    cluster.points.push_back(points[j]);
-                    visited[j] = true;
-                }
-            }
-            clusters.push_back(cluster);
-        }
+    //             if(d < cluster_threshold){
+    //                 cluster.points.push_back(points[j]);
+    //                 visited[j] = true;
+    //             }
+    //         }
+    //         clusters.push_back(cluster);
+    //     }
         
-        return clusters;
+    //     return clusters;
+    // }
+
+std::vector<Cluster> clusterPoints(
+  const std::vector<Point2D>& points,
+  double cluster_threshold)
+{
+  std::vector<Cluster> clusters;
+  if (points.empty()) return clusters;
+
+  Cluster current;
+  current.points.push_back(points[0]);
+
+  for (size_t i = 1; i < points.size(); i++)
+  {
+    double dx = points[i].x - points[i-1].x;
+    double dy = points[i].y - points[i-1].y;
+    double d  = std::sqrt(dx*dx + dy*dy);
+
+    if (d < cluster_threshold) {
+      current.points.push_back(points[i]);
+    } else {
+      if (current.points.size() >= 8)
+        clusters.push_back(current);
+      current.points.clear();
+      current.points.push_back(points[i]);
     }
+  }
+
+  if (current.points.size() >= 8)
+    clusters.push_back(current);
+
+  return clusters;
+}
+
+void mergeClusters(std::vector<Cluster>& clusters, double merge_dist = 0.35)
+{
+  for(size_t i = 0; i < clusters.size(); i++)
+  {
+    for(size_t j = i + 1; j < clusters.size(); )
+    {
+      double dx = clusters[i].centre.x - clusters[j].centre.x;
+      double dy = clusters[i].centre.y - clusters[j].centre.y;
+      double d = std::hypot(dx,dy);
+
+      if(d < merge_dist)
+      {
+        clusters[i].points.insert(
+            clusters[i].points.end(),
+            clusters[j].points.begin(),
+            clusters[j].points.end());
+
+        clusters.erase(clusters.begin() + j);
+      }
+      else
+      {
+        j++;
+      }
+    }
+  }
+}
 
 
     // Compute centre and radius of each cluster
@@ -85,6 +144,21 @@ void computeClusterProperties(std::vector<Cluster>& clusters)
     }
     c.centre.x = sum_x / c.points.size();
     c.centre.y = sum_y / c.points.size();
+
+    // double min_d = 1e9;
+    // Point2D best;
+
+    // for (const auto& p : c.points)
+    // {
+    // double d = std::hypot(p.x, p.y);
+    // if (d < min_d)
+    // {
+    //     min_d = d;
+    //     best = p;
+    // }
+    // }
+
+    // c.centre = best;
 
     // Radius = max distance from centre to any point
     double max_r = 0.0;
@@ -140,6 +214,8 @@ private:
           return c.points.size() < 9;// Adjust threshold as needed
         }),
       clusters.end());
+
+    //  trajectory_controller::mergeClusters(clusters);
 
     // Compute centre and radius
     trajectory_controller::computeClusterProperties(clusters);

@@ -2,6 +2,7 @@
 #include <visualization_msgs/msg/marker_array.hpp>
 #include <geometry_msgs/msg/point.hpp>
 #include <vector>
+#include "trajectory_controller/types.hpp"
 
 
 
@@ -26,15 +27,17 @@ public:
     //   {6.0, 0.0}
     // };
 
-     waypoints_ ={  // upside down V shaped trajectory 
-        {0.0, 0.0},  //← start
-        {1.0, 0.5},
-        {2.0, 2.0},
-        {3.0, 2.5},
-        {4.0, 1.5},
-        {5.0, 0.5},
-        {6.0, 1.0}  //← end
-    };
+    //  waypoints_ ={  // upside down V shaped trajectory 
+    //     {0.0, 0.0},  //← start
+    //     {1.0, 0.5},
+    //     {2.0, 2.0},
+    //     {3.0, 2.5},
+    //     {4.0, 1.5},
+    //     {5.0, 0.5},
+    //     {6.0, 1.0}  //← end
+    // };
+
+    waypoints_ = trajectory_controller::getWaypoints(this);
 
     publisher_ = this->create_publisher<visualization_msgs::msg::MarkerArray>("/waypoints", 10);
 
@@ -50,7 +53,7 @@ public:
     
 
 private:
-    std::vector<Point2D> waypoints_;
+    std::vector<trajectory_controller::Point2D> waypoints_;
     rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr publisher_;
     rclcpp::TimerBase::SharedPtr timer_;
 

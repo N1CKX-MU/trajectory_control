@@ -85,13 +85,13 @@ class ControllerNode : public rclcpp::Node
 public: 
     ControllerNode() : Node("controller_node")
     {
-        k_lookahead_ = 1.5;
-        min_lookahead_ = 0.15;
-        max_lookahead_ = 0.6; 
-        v_max_ = 0.18;
-        goal_tolerance_ = 0.1;
+    k_lookahead_    = this->declare_parameter("controller.lookahead_gain",  1.5);
+    min_lookahead_  = this->declare_parameter("controller.min_lookahead",   0.15);
+    max_lookahead_  = this->declare_parameter("controller.max_lookahead",   0.60);
+    v_max_          = this->declare_parameter("controller.max_linear_vel",  0.18);
+    goal_tolerance_ = this->declare_parameter("controller.goal_tolerance",  0.10);
 
-        waypoints_ = trajectory_controller::getDefaultWaypoints();
+        waypoints_ = trajectory_controller::getWaypoints(this);
 
         buildTrajectory();
 

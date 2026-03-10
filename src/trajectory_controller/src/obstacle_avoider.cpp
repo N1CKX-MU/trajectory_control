@@ -47,7 +47,7 @@ std::vector<Point2D> avoidObstacles(
 
         for( int iter = 0; iter < iterations; iter++)
         {
-            for(size_t i = 0 ; i < result.size(); i++)
+            for(size_t i = 1 ; i < result.size(); i++)
             {
                 //Smoothness gradient
                 double smooth_x = result[i-1].x - 2*result[i].x + result[i+1].x;
@@ -65,15 +65,41 @@ std::vector<Point2D> avoidObstacles(
 
                 for(const auto& obs : obstacles)
                 {
-                    double dx = result[i].x - obs.x;
-                    double dy = result[i].y - obs.y;
-                    double d = std::sqrt(dx*dx + dy*dy);
+                    double dx   = result[i].x - obs.x;
+                    double dy   = result[i].y - obs.y;
+                    double d    = std::sqrt(dx*dx + dy*dy);
+                    double safe_r = obs.radius + safe_margin;
 
-                    if(d < obs.radius + safe_margin && d > 1e-6)
+                    if(d < safe_r && d > 1e-6)
                     {
-                        double strength = (obs.radius + safe_margin - d) / d;
-                        repulse_x += strength * dx;
-                        repulse_y += strength * dy;
+                        // Determine which side to go around — use cross product
+                        // of path direction vs obstacle direction
+                        // This is computed once from original path so it never flips
+                        double path_dx = 0.0, path_dy = 0.0;
+                        if (i < original.size() - 1) {
+                            path_dx = original[i+1].x - original[i].x;
+                            path_dy = original[i+1].y - original[i].y;
+                        }
+                        // Cross product z-component: positive = obstacle on right, negative = left
+                        double cross = path_dx * (obs.y - original[i].y) 
+                                     - path_dy * (obs.x - original[i].x);
+
+                        // Always push perpendicular to path in consistent direction
+                        double perp_x = -path_dy;
+                        double perp_y =  path_dx;
+                        double perp_len = std::sqrt(perp_x*perp_x + perp_y*perp_y);
+                        if (perp_len > 1e-6) {
+                            perp_x /= perp_len;
+                            perp_y /= perp_len;
+                        }
+
+                        // If obstacle is on the right (cross > 0), push left (negative perp)
+                        // If obstacle is on the left (cross < 0), push right (positive perp)
+                        double sign = (cross > 0) ? -1.0 : 1.0;
+                        double strength = (safe_r - d);
+
+                        repulse_x += sign * strength * perp_x;
+                        repulse_y += sign * strength * perp_y;
                     }
                 }
                 //Combine gradients
@@ -94,7 +120,7 @@ class ObstacleAvoiderNode : public rclcpp::Node
 public:
   ObstacleAvoiderNode() : Node("obstacle_avoider_node")
   {
-    waypoints_ = trajectory_controller::getDefaultWaypoints();
+    waypoints_ = trajectory_controller::getWaypoints(this);
 
     // Publisher — the safe avoided path
     path_pub_ = this->create_publisher<visualization_msgs::msg::MarkerArray>(
@@ -146,9 +172,9 @@ private:
     auto safe = trajectory_controller::avoidObstacles(
       smooth,
       obstacles_,
-      0.6,    // alpha — smoothness weight
-      0.05,    // learning rate
-      800,    // iterations
+      0.5,    // alpha — smoothness weight
+      0.08,    // learning rate
+      500,    // iterations
       0.35    // safe margin beyond obstacle radius
     );
 

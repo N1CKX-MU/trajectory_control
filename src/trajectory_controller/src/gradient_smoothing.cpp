@@ -64,7 +64,7 @@ class GradientSmoothing : public rclcpp::Node
 public: 
     GradientSmoothing() : Node("gradient_smoothing_node")
     {
-        waypoints_ = trajectory_controller::getDefaultWaypoints();
+        waypoints_ = trajectory_controller::getWaypoints(this);
 
         publisher_ = this->create_publisher<visualization_msgs::msg::MarkerArray>("/path_gradient", 10);
 

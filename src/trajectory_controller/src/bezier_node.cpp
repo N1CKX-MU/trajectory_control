@@ -74,7 +74,7 @@ class BezierNode : public rclcpp::Node
 public:
     BezierNode() : Node("bezier_node")
     {
-        waypoints_ = trajectory_controller::getDefaultWaypoints();
+        waypoints_ = trajectory_controller::getWaypoints(this);
         publisher_ = this->create_publisher<visualization_msgs::msg::MarkerArray>("/bezier_path", 10);
         timer_ = this->create_wall_timer(
             std::chrono::seconds(1),
