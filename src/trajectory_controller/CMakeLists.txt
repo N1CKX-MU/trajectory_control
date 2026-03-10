@@ -57,6 +57,66 @@ target_include_directories(bezier_node PUBLIC
 )
 
 
+add_executable(gradient_descent_node src/gradient_smoothing.cpp)
+ament_target_dependencies(gradient_descent_node
+  rclcpp
+  visualization_msgs
+  geometry_msgs
+)
+
+install(TARGETS
+  gradient_descent_node
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+target_include_directories(gradient_descent_node PUBLIC
+  ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
+
+
+add_executable(trajectory_generator_node src/trajectory_generator.cpp)
+ament_target_dependencies(trajectory_generator_node
+  rclcpp
+  nav_msgs
+  geometry_msgs
+  visualization_msgs
+  std_msgs
+  tf2
+  tf2_ros
+  tf2_geometry_msgs
+)
+
+install(TARGETS
+  trajectory_generator_node
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+
+target_include_directories(trajectory_generator_node PUBLIC
+  ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
+
+
+add_executable(controller_node src/controller.cpp)
+ament_target_dependencies(controller_node
+  rclcpp
+  geometry_msgs
+  nav_msgs
+  std_msgs
+  tf2
+  tf2_ros
+  tf2_geometry_msgs
+)
+
+install(TARGETS
+  controller_node
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+
+target_include_directories(controller_node PUBLIC
+  ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
 
 
 # ── Install directories ────────────────────────────────────────────────────
@@ -64,6 +124,7 @@ install(TARGETS
   waypoints_node
   catmullrom_node
   bezier_node
+  trajectory_generator_node
   DESTINATION lib/${PROJECT_NAME}
 )
 

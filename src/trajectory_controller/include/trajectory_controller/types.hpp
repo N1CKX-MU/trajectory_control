@@ -9,6 +9,14 @@ struct Point2D {
   double y{0.0};
 };
 
+struct TrajectoryPoint {
+    double x;
+    double y;
+    double theta;
+    double velocity;
+    double time;
+};
+
 // Waypoints used by all nodes — single source of truth
 inline std::vector<Point2D> getDefaultWaypoints()
 {
