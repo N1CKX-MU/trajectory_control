@@ -1,0 +1,98 @@
+<?xml version="1.0" ?>
+<sdf version="1.6">
+  <world name="obstacle_course">
+
+    <include>
+      <uri>model://ground_plane</uri>
+    </include>
+
+    <include>
+      <uri>model://sun</uri>
+    </include>
+
+    <!-- Obstacle 1 — sits on path between waypoint 1 and 2 -->
+    <model name="obstacle_1">
+      <static>true</static>
+      <pose>1.5 1.2 0.0 0 0 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry>
+            <cylinder>
+              <radius>0.2</radius>
+              <length>0.5</length>
+            </cylinder>
+          </geometry>
+        </collision>
+        <visual name="visual">
+          <geometry>
+            <cylinder>
+              <radius>0.2</radius>
+              <length>0.5</length>
+            </cylinder>
+          </geometry>
+          <material>
+            <ambient>1 0 0 1</ambient>
+            <diffuse>1 0 0 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- Obstacle 2 — sits on path between waypoint 3 and 4 -->
+    <model name="obstacle_2">
+      <static>true</static>
+      <pose>3.0 2.0 0.0 0 0 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry>
+            <cylinder>
+              <radius>0.2</radius>
+              <length>0.5</length>
+            </cylinder>
+          </geometry>
+        </collision>
+        <visual name="visual">
+          <geometry>
+            <cylinder>
+              <radius>0.2</radius>
+              <length>0.5</length>
+            </cylinder>
+          </geometry>
+          <material>
+            <ambient>1 0 0 1</ambient>
+            <diffuse>1 0 0 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- Obstacle 3 — sits on path between waypoint 4 and 5 -->
+    <model name="obstacle_3">
+      <static>true</static>
+      <pose>4.5 1.0 0.0 0 0 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry>
+            <cylinder>
+              <radius>0.2</radius>
+              <length>0.5</length>
+            </cylinder>
+          </geometry>
+        </collision>
+        <visual name="visual">
+          <geometry>
+            <cylinder>
+              <radius>0.2</radius>
+              <length>0.5</length>
+            </cylinder>
+          </geometry>
+          <material>
+            <ambient>1 0 0 1</ambient>
+            <diffuse>1 0 0 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+  </world>
+</sdf>

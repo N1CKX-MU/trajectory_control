@@ -118,6 +118,27 @@ target_include_directories(controller_node PUBLIC
   ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
+add_executable(obstacle_detector_node src/obstacle_detector.cpp)
+ament_target_dependencies(obstacle_detector_node
+  rclcpp
+  sensor_msgs
+  visualization_msgs
+  geometry_msgs
+  tf2
+  tf2_ros
+  tf2_geometry_msgs
+)
+
+install(TARGETS
+  obstacle_detector_node
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+
+target_include_directories(obstacle_detector_node PUBLIC
+  ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
+
 
 # ── Install directories ────────────────────────────────────────────────────
 install(TARGETS
@@ -125,6 +146,7 @@ install(TARGETS
   catmullrom_node
   bezier_node
   trajectory_generator_node
+  obstacle_detector_node
   DESTINATION lib/${PROJECT_NAME}
 )
 
