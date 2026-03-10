@@ -73,7 +73,18 @@ public:
             [this](){publish(); });
 
         RCLCPP_INFO(this->get_logger(), "Gradient Smoothing node started ");
-      
+        
+        num_points_ = this->declare_parameter<int>("smoother.samples_per_segment", 100);
+
+        alpha_ = this->declare_parameter<double>("smoother.gradient_alpha", 0.8);
+
+        learning_rate_ = this->declare_parameter<double>(
+            "smoother.gradient_learning_rate", 0.1);
+
+        iterations_ = this->declare_parameter<int>(
+            "smoother.gradient_iterations", 500);
+
+        
 
     }
 
@@ -82,8 +93,20 @@ private:
     rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr publisher_;
     rclcpp::TimerBase::SharedPtr timer_;
 
+    int num_points_;
+    double alpha_;
+    double learning_rate_;
+    int iterations_;
+
     void publish(){
-        auto smooth = trajectory_controller::gradientDescentSmoothing(waypoints_, 100, 0.9, 0.01, 500); // Function call 
+        auto smooth = trajectory_controller::gradientDescentSmoothing(
+            waypoints_,
+            num_points_,
+            alpha_,
+            learning_rate_,
+            iterations_);
+            
+        // Function call 
 
         visualization_msgs::msg::MarkerArray marker_array;
         visualization_msgs::msg::Marker line;

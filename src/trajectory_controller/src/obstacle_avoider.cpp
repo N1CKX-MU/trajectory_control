@@ -47,7 +47,7 @@ std::vector<Point2D> avoidObstacles(
 
         for( int iter = 0; iter < iterations; iter++)
         {
-            for(size_t i = 1 ; i < result.size(); i++)
+            for(size_t i = 1 ; i < result.size() - 1; i++)
             {
                 //Smoothness gradient
                 double smooth_x = result[i-1].x - 2*result[i].x + result[i+1].x;
@@ -137,15 +137,39 @@ public:
       std::chrono::seconds(1),
       [this]() { publish(); });
 
-    RCLCPP_INFO(this->get_logger(), "Obstacle avoider node started");
+    
+    samples_ = this->declare_parameter<int>(
+        "smoother.samples_per_segment", 20);
+
+    alpha_ = this->declare_parameter<double>(
+        "obstacle_avoider.alpha", 0.6);
+
+    learning_rate_ = this->declare_parameter<double>(
+        "obstacle_avoider.learning_rate", 0.05);
+
+    iterations_ = this->declare_parameter<int>(
+        "obstacle_avoider.iterations", 800);
+
+    safe_margin_ = this->declare_parameter<double>(
+        "obstacle_avoider.safe_margin", 0.45);
+
+    RCLCPP_INFO(this->get_logger(),
+        "Obstacle Avoider params: alpha=%.2f lr=%.3f iter=%d margin=%.2f",
+        alpha_, learning_rate_, iterations_, safe_margin_);
   }
 
 private:
-  std::vector<trajectory_controller::Point2D>         waypoints_;
-  std::vector<trajectory_controller::DetectedObstacle> obstacles_;
-  rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr path_pub_;
-  rclcpp::Subscription<visualization_msgs::msg::MarkerArray>::SharedPtr obstacle_sub_;
-  rclcpp::TimerBase::SharedPtr timer_;
+    std::vector<trajectory_controller::Point2D>         waypoints_;
+    std::vector<trajectory_controller::DetectedObstacle> obstacles_;
+    rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr path_pub_;
+    rclcpp::Subscription<visualization_msgs::msg::MarkerArray>::SharedPtr obstacle_sub_;
+    rclcpp::TimerBase::SharedPtr timer_;
+
+    double alpha_;
+    double learning_rate_;
+    int iterations_;
+    double safe_margin_;
+    int samples_;
 
   void obstacleCallback(visualization_msgs::msg::MarkerArray::SharedPtr msg)
   {
@@ -166,17 +190,18 @@ private:
   void publish()
   {
     // Get smooth path
-    auto smooth = trajectory_controller::catmullRomSmooth(waypoints_, 20);
+    auto smooth = trajectory_controller::catmullRomSmooth(
+        waypoints_,
+        samples_);
 
     // Deform around detected obstacles
     auto safe = trajectory_controller::avoidObstacles(
-      smooth,
-      obstacles_,
-      0.5,    // alpha — smoothness weight
-      0.08,    // learning rate
-      500,    // iterations
-      0.35    // safe margin beyond obstacle radius
-    );
+        smooth,
+        obstacles_,
+        alpha_,
+        learning_rate_,
+        iterations_,
+        safe_margin_);
 
     // Publish as purple line
     visualization_msgs::msg::MarkerArray arr;

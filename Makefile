@@ -1,0 +1,78 @@
+.PHONY: build clean docker docker-down docker-build bezier gradient trajectory obstacle avoid controller topics nodes tf rviz gazebo demo demo_obstacles
+
+WS := $(HOME)/ros2_ws
+PKG := trajectory_controller
+CONTAINER := traj_cont
+
+SHELL := /bin/bash
+.SHELLFLAGS := -c
+
+# ───────── BUILD ─────────
+
+build:
+	colcon build --packages-select $(PKG) --symlink-install
+
+clean:
+	rm -rf build install log
+
+# ───────── DOCKER ─────────
+
+docker:
+	docker compose up -d
+	sleep 2
+	docker exec -it $(CONTAINER) bash
+
+docker-down:
+	docker compose down
+
+docker-build:
+	docker compose build
+
+# ───────── RUN NODES ─────────
+
+bezier: build
+	source /opt/ros/humble/setup.bash && source install/setup.bash && ros2 run $(PKG) bezier_node
+
+gradient: build
+	source /opt/ros/humble/setup.bash && source install/setup.bash && ros2 run $(PKG) gradient_smoothing_node
+
+trajectory: build
+	source /opt/ros/humble/setup.bash && source install/setup.bash && ros2 run $(PKG) trajectory_generator_node
+
+obstacle: build
+	source /opt/ros/humble/setup.bash && source install/setup.bash && ros2 run $(PKG) obstacle_detector_node
+
+avoid: build
+	source /opt/ros/humble/setup.bash && source install/setup.bash && ros2 run $(PKG) obstacle_avoider_node
+
+controller: build
+	source /opt/ros/humble/setup.bash && source install/setup.bash && ros2 run $(PKG) controller_node
+
+# ───────── DEBUG ─────────
+
+topics:
+	source /opt/ros/humble/setup.bash && source install/setup.bash && ros2 topic list
+
+nodes:
+	source /opt/ros/humble/setup.bash && source install/setup.bash && ros2 node list
+
+tf:
+	source /opt/ros/humble/setup.bash && source install/setup.bash && ros2 run tf2_tools view_frames
+
+# ───────── VISUALIZATION ─────────
+
+rviz:
+	source /opt/ros/humble/setup.bash && rviz2
+
+gazebo:
+	export TURTLEBOT3_MODEL=burger && \
+	source /opt/ros/humble/setup.bash && \
+	ros2 launch turtlebot3_gazebo turtlebot3_world.launch.py
+
+# ───────── DEMOS ─────────
+
+demo: build
+	source /opt/ros/humble/setup.bash && source install/setup.bash && ros2 launch $(PKG) demo.launch.py
+
+demo_obstacles: build
+	source /opt/ros/humble/setup.bash && source install/setup.bash && ros2 launch $(PKG) demo_with_obstacles.launch.py

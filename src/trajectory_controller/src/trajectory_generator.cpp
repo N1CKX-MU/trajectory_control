@@ -139,14 +139,25 @@ public:
 
         vel_pub_ = this->create_publisher<std_msgs::msg::Float64MultiArray>("/trajectory_velocities", 10); 
 
+        samples_per_segment_ =
+            this->declare_parameter<int>("smoother.samples_per_segment", 20);
+
+        max_velocity_ =
+            this->declare_parameter<double>("trajectory.max_velocity", 0.18);
+
+        acceleration_ =
+            this->declare_parameter<double>("trajectory.acceleration", 0.05);
+
 
         timer_ = this->create_wall_timer(
             std::chrono::seconds(1),
             [this](){publish(); });
 
-        RCLCPP_INFO(this->get_logger(), "Trajectory Generator node started with %zu waypoints",
-        waypoints_.size());
-    }
+        RCLCPP_INFO(this->get_logger(),
+        "Params loaded: samples=%d vel=%.2f accel=%.2f",
+        samples_per_segment_,
+        max_velocity_,
+        acceleration_);
 
 private: 
 
@@ -155,10 +166,20 @@ private:
     rclcpp::Publisher<std_msgs::msg::Float64MultiArray>::SharedPtr vel_pub_;
     rclcpp::TimerBase::SharedPtr timer_;
 
+    int samples_per_segment_;
+    double max_velocity_;
+    double acceleration_;
+
     void publish()
     {
-        auto smooth = trajectory_controller::catmullRomSpline(waypoints_,20);
-        auto trajectory = trajectory_controller::generateTrajectory(smooth,0.18,0.05);
+        auto smooth = trajectory_controller::catmullRomSpline(
+            waypoints_,
+            samples_per_segment_);
+
+        auto trajectory = trajectory_controller::generateTrajectory(
+            smooth,
+            max_velocity_,
+            acceleration_);
 
         nav_msgs::msg::Path path_msg;
         path_msg.header.frame_id = "odom";

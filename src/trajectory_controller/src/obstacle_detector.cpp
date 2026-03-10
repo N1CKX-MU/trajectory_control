@@ -73,7 +73,7 @@ namespace trajectory_controller
 
 std::vector<Cluster> clusterPoints(
   const std::vector<Point2D>& points,
-  double cluster_threshold)
+  double cluster_threshold,int min_cluster_points)
 {
   std::vector<Cluster> clusters;
   if (points.empty()) return clusters;
@@ -90,14 +90,14 @@ std::vector<Cluster> clusterPoints(
     if (d < cluster_threshold) {
       current.points.push_back(points[i]);
     } else {
-      if (current.points.size() >= 8)
+      if (current.points.size() >= min_cluster_points)
         clusters.push_back(current);
       current.points.clear();
       current.points.push_back(points[i]);
     }
   }
 
-  if (current.points.size() >= 8)
+  if (current.points.size() >= min_cluster_points)
     clusters.push_back(current);
 
   return clusters;
@@ -190,7 +190,16 @@ public:
       "/scan", 10,
       [this](sensor_msgs::msg::LaserScan::SharedPtr msg) { scanCallback(msg); });
 
-    RCLCPP_INFO(this->get_logger(), "Obstacle detector node started");
+
+
+    cluster_threshold_ = this->declare_parameter<double>(
+        "obstacle_detector.cluster_threshold", 0.25);
+
+    min_cluster_points_ = this->declare_parameter<int>(
+        "obstacle_detector.min_cluster_points", 8);
+    RCLCPP_INFO(this->get_logger(),
+    "Obstacle detector params: threshold=%.2f min_points=%d",
+    cluster_threshold_, min_cluster_points_);
   }
 
 private:
@@ -199,21 +208,27 @@ private:
   rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr marker_pub_;
   rclcpp::Subscription<sensor_msgs::msg::LaserScan>::SharedPtr       scan_sub_;
 
+  double cluster_threshold_;
+  int min_cluster_points_;
+
   void scanCallback(sensor_msgs::msg::LaserScan::SharedPtr msg)
   {
     // Convert scan to points in robot frame
     auto points = trajectory_controller::scanToPoints(msg);
 
     // Cluster points
-    auto clusters = trajectory_controller::clusterPoints(points, 0.25);
+    auto clusters = trajectory_controller::clusterPoints(
+        points,
+        cluster_threshold_,
+        min_cluster_points_);
 
     // Discard clusters with too few points (noise)
-    clusters.erase(
-      std::remove_if(clusters.begin(), clusters.end(),
-        [](const trajectory_controller::Cluster& c) {
-          return c.points.size() < 9;// Adjust threshold as needed
-        }),
-      clusters.end());
+    // clusters.erase(
+    //   std::remove_if(clusters.begin(), clusters.end(),
+    //     [](const trajectory_controller::Cluster& c) {
+    //       return c.points.size() < min_cluster_points_;// Adjust threshold as needed
+    //     }),
+    //   clusters.end());
 
     //  trajectory_controller::mergeClusters(clusters);
 
