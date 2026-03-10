@@ -29,12 +29,29 @@ ament_target_dependencies(waypoints_node
 )
 
 
+target_include_directories(waypoints_node PUBLIC
+  ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
+
+add_executable(catmullrom_node src/catmull.cpp)
+ament_target_dependencies(catmullrom_node
+  rclcpp
+  visualization_msgs
+  geometry_msgs
+)
+
+target_include_directories(catmullrom_node PUBLIC
+  ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
+
+
 
 
 
 # ── Install directories ────────────────────────────────────────────────────
 install(TARGETS
   waypoints_node
+  catmullrom_node
   DESTINATION lib/${PROJECT_NAME}
 )
 

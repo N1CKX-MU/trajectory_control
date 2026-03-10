@@ -16,14 +16,24 @@ class Waypoints : public rclcpp::Node
 public:
     Waypoints() : Node("waypoints_node")
     {
-        waypoints_ = {
-      {0.0, 0.0},
-      {1.0, 0.5},
-      {2.0, 1.5},
-      {3.0, 1.0},
-      {4.0, 2.0},
-      {5.0, 1.0},
-      {6.0, 0.0}
+    //     waypoints_ = {
+    //   {0.0, 0.0},
+    //   {1.0, 0.5},
+    //   {2.0, 1.5},
+    //   {3.0, 1.0},
+    //   {4.0, 2.0},
+    //   {5.0, 1.0},
+    //   {6.0, 0.0}
+    // };
+
+     waypoints_ ={  // upside down V shaped trajectory 
+        {0.0, 0.0},  //← start
+        {1.0, 0.5},
+        {2.0, 2.0},
+        {3.0, 2.5},
+        {4.0, 1.5},
+        {5.0, 0.5},
+        {6.0, 1.0}  //← end
     };
 
     publisher_ = this->create_publisher<visualization_msgs::msg::MarkerArray>("/waypoints", 10);
