@@ -118,7 +118,7 @@ make demo_obstacles
 │  waypoints_node  ──→  /waypoints                        │
 │  catmullrom_node ──→  /path_catmullrom   (blue)         │
 │  bezier_node     ──→  /path_bezier       (red)          │
-│  gradient_node   ──→  /path_gradient     (orange)       │
+│  gradient_node   ──→  /path_gradient     (cyan)         │
 │                                                         │
 │  trajectory_generator_node ──→ /trajectory              │
 │                                                         │
@@ -164,7 +164,7 @@ P2 = waypoint[i+1] - 0.25 * (waypoint[i+2] - waypoint[i])
 x(t) = (1-t)³P0 + 3(1-t)²t·P1 + 3(1-t)t²·P2 + t³P3
 ```
 
-### Gradient Descent (Orange)
+### Gradient Descent (Cyan)
 Starts with straight lines between waypoints and iteratively minimises a cost function balancing smoothness against deviation from the original path:
 
 ```
@@ -310,10 +310,10 @@ trajectory_controller:
 
 | Command | Description |
 |---------|-------------|
-| `make build` | Build the ROS2 package |
-| `make demo` | Full demo — Gazebo + all nodes + RViz2 |
+| `make build` | Build the ROS2 package & source the ws|
+| `make demo` | Full demo -> Gazebo + all nodes + RViz2 |
 | `make demo_obstacles` | Demo with obstacle avoidance |
-| `make graph_compare` | Smoother comparison — no Gazebo, no robot |
+| `make graph_compare` | Smoother comparison -> no Gazebo, no robot, just RViz |
 | `make controller` | Run controller node only |
 | `make topics` | List all active ROS2 topics |
 | `make nodes` | List all active ROS2 nodes |
