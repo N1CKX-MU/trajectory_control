@@ -7,6 +7,7 @@ from launch.substitutions import PathJoinSubstitution
 from launch_ros.substitutions import FindPackageShare
 import os
 
+
 def generate_launch_description():
 
     pkg_share = get_package_share_directory('trajectory_controller')

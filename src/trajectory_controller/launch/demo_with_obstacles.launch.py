@@ -7,11 +7,12 @@ from launch.substitutions import PathJoinSubstitution
 from launch_ros.substitutions import FindPackageShare
 import os
 
+
 def generate_launch_description():
 
-    tb3_gazebo     = get_package_share_directory('turtlebot3_gazebo')
+    tb3_gazebo= get_package_share_directory('turtlebot3_gazebo')
     pkg_gazebo_ros = get_package_share_directory('gazebo_ros')
-    pkg_share      = get_package_share_directory('trajectory_controller')
+    pkg_share = get_package_share_directory('trajectory_controller')
     params_file    = os.path.join(pkg_share, 'config', 'params.yaml')
 
     gazebo = IncludeLaunchDescription(

@@ -114,6 +114,18 @@ public:
       [this](visualization_msgs::msg::MarkerArray::SharedPtr msg) {
         pathCallback(msg); });
 
+        // Fallback — if no avoided path received within 3s use Catmull-Rom directly
+        fallback_timer_ = this->create_wall_timer(
+          std::chrono::milliseconds(100),
+          [this]() {
+            if (!path_received_) {
+              RCLCPP_INFO(this->get_logger(),
+                "No avoider running — using Catmull-Rom path directly");
+              path_received_ = true;
+            }
+            fallback_timer_->cancel();
+          });
+
 
         RCLCPP_INFO(this->get_logger(),
             "Controller node started, Trajectory has %zu points", trajectory_.size());
@@ -140,6 +152,7 @@ private:
     rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr                  actual_path_pub_;
     rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr           odom_sub_;
     rclcpp::Subscription<visualization_msgs::msg::MarkerArray>::SharedPtr path_sub_;
+    rclcpp::TimerBase::SharedPtr                                       fallback_timer_;
     bool path_received_{false};
 
     nav_msgs::msg::Path actual_path_msg_;

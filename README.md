@@ -338,3 +338,38 @@ Check fixed frame is set to `odom`. Run `make topics` to verify nodes are publis
 
 **Controller prints "Waiting for avoided path..."**
 Start `obstacle_detector_node` and `obstacle_avoider_node` before the controller. The controller waits until a valid path is received before moving.
+
+
+---
+
+## 2.2 Design Choices & Algorithms
+
+<!-- TODO: Write in your own words -->
+<!-- PLACEHOLDER: Explain why you chose Pure Pursuit over PID, why Catmull-Rom as primary smoother,
+     why separate nodes instead of one monolithic node, why Docker for deployment -->
+
+---
+
+## 2.3 Extending to a Real Robot
+
+<!-- TODO: Write in your own words -->
+<!-- PLACEHOLDER: Explain sensor calibration, replacing /odom with real odometry + IMU fusion,
+     replacing Gazebo LiDAR with real RPLidar A1, tuning lookahead gain for real wheel slip,
+     safety stops, real-time constraints -->
+
+---
+
+## 2.4 AI Tools Used
+
+<!-- TODO: Write in your own words -->
+<!-- PLACEHOLDER: Mention Claude was used for code generation and debugging throughout development.
+     Be specific about what was AI-assisted vs what you understood and directed -->
+
+---
+
+## 2.5 Obstacle Avoidance Extension
+
+<!-- TODO: Write in your own words -->
+<!-- PLACEHOLDER: Explain the LiDAR-based detection pipeline, the gradient descent + repulsion
+     approach, the visibility graph bypass approach, why static replanning was chosen,
+     and how dynamic replanning would work with a replanning loop -->

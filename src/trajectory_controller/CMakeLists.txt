@@ -107,9 +107,13 @@ install(DIRECTORY
 
 # ── Testing ───────────────────────────────────────────────────────
 if(BUILD_TESTING)
-  find_package(ament_lint_auto REQUIRED)
   find_package(ament_cmake_gtest REQUIRED)
-  ament_lint_auto_find_test_dependencies()
-endif()
 
+  ament_add_gtest(test_smoothers test/test_smoothers.cpp)
+  target_include_directories(test_smoothers PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>)
+  ament_target_dependencies(test_smoothers rclcpp)
+
+  install(TARGETS test_smoothers DESTINATION lib/${PROJECT_NAME})
+endif()
 ament_package()
