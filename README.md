@@ -146,7 +146,7 @@ make demo_obstacles
 ## Path Smoothing Algorithms
 
 ### Catmull-Rom Spline (Blue)
-Passes through every waypoint. Uses the previous and next waypoint as implicit control points to determine curvature at each point. Produces natural-looking curves with C1 continuity.
+Passes through every waypoint. Uses the previous and next waypoint as control points to determine curvature at each point. Produces natural-looking curves with C1 continuity.
 
 ```
 For segment i → i+1:
@@ -157,6 +157,7 @@ For segment i → i+1:
 
   x(t) = 0.5 * [(2p1) + (-p0+p2)t + (2p0-5p1+4p2-p3)t² + (-p0+3p1-3p2+p3)t³]
 ```
+
 
 ### Cubic Bezier (Red)
 Does not pass through waypoints — control points pull the curve like magnets. Control points are computed automatically from neighbouring waypoints:
@@ -345,35 +346,3 @@ Start `obstacle_detector_node` and `obstacle_avoider_node` before the controller
 
 
 ---
-
-## 2.2 Design Choices & Algorithms
-
-<!-- TODO: Write in your own words -->
-<!-- PLACEHOLDER: Explain why you chose Pure Pursuit over PID, why Catmull-Rom as primary smoother,
-     why separate nodes instead of one monolithic node, why Docker for deployment -->
-
----
-
-## 2.3 Extending to a Real Robot
-
-<!-- TODO: Write in your own words -->
-<!-- PLACEHOLDER: Explain sensor calibration, replacing /odom with real odometry + IMU fusion,
-     replacing Gazebo LiDAR with real RPLidar A1, tuning lookahead gain for real wheel slip,
-     safety stops, real-time constraints -->
-
----
-
-## 2.4 AI Tools Used
-
-<!-- TODO: Write in your own words -->
-<!-- PLACEHOLDER: Mention Claude was used for code generation and debugging throughout development.
-     Be specific about what was AI-assisted vs what you understood and directed -->
-
----
-
-## 2.5 Obstacle Avoidance Extension
-
-<!-- TODO: Write in your own words -->
-<!-- PLACEHOLDER: Explain the LiDAR-based detection pipeline, the gradient descent + repulsion
-     approach, the visibility graph bypass approach, why static replanning was chosen,
-     and how dynamic replanning would work with a replanning loop -->
