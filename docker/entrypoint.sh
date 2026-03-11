@@ -18,5 +18,8 @@ if [ -d /ros2_ws/src ]; then
         --event-handlers console_cohesion+
     source /ros2_ws/install/setup.bash
 fi
+chmod 700 /tmp/runtime-root
+export GAZEBO_MODEL_DATABASE_URI=""
+export GAZEBO_MODEL_PATH=/usr/share/gazebo-11/models:/opt/ros/humble/share/turtlebot3_gazebo/models
 
 exec "$@"

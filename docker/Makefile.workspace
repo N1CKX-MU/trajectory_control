@@ -1,6 +1,6 @@
 .PHONY: build clean docker docker-down docker-build bezier gradient trajectory obstacle avoid controller topics nodes tf rviz gazebo demo demo_obstacles graph_compare
 
-WS := $(HOME)/ros2_ws
+
 PKG := trajectory_controller
 CONTAINER := traj_cont
 

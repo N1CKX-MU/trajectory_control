@@ -15,6 +15,7 @@ services:
     volumes:
       - /tmp/.X11-unix:/tmp/.X11-unix:rw
       - ./src:/ros2_ws/src
+      - ./docker/Makefile.workspace:/ros2_ws/Makefile
     deploy:
       resources:
         reservations:
