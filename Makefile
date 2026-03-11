@@ -1,4 +1,4 @@
-.PHONY: build clean docker docker-down docker-build bezier gradient trajectory obstacle avoid controller topics nodes tf rviz gazebo demo demo_obstacles
+.PHONY: build clean docker docker-down docker-build bezier gradient trajectory obstacle avoid controller topics nodes tf rviz gazebo demo demo_obstacles graph_compare
 
 WS := $(HOME)/ros2_ws
 PKG := trajectory_controller
@@ -76,3 +76,9 @@ demo: build
 
 demo_obstacles: build
 	source /opt/ros/humble/setup.bash && source install/setup.bash && ros2 launch $(PKG) demo_with_obstacles.launch.py
+
+
+graph_compare: build
+	source /opt/ros/humble/setup.bash && source install/setup.bash && ros2 launch $(PKG) graph_compare.launch.py
+
+

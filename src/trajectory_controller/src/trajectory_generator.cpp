@@ -158,7 +158,7 @@ public:
         samples_per_segment_,
         max_velocity_,
         acceleration_);
-
+    }
 private: 
 
     std::vector<trajectory_controller::Point2D> waypoints_;

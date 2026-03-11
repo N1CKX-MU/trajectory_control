@@ -1,4 +1,4 @@
-```cmake
+
 cmake_minimum_required(VERSION 3.14)
 project(trajectory_controller VERSION 0.1.0 LANGUAGES CXX)
 
@@ -113,4 +113,3 @@ if(BUILD_TESTING)
 endif()
 
 ament_package()
-```
