@@ -26,46 +26,35 @@ namespace trajectory_controller
 // Catmull Rom Spline - suplicated here so this is self contained 
 // and doesnt depend oon catmull.cpp
 
-    static std::vector<Point2D> catmullRomSpline( 
+static std::vector<Point2D> catmullRomSpline( 
         const std::vector<Point2D>& pts,  
         int samples_per_segment = 10)
     {
-            std::vector<Point2D> result;
+        std::vector<Point2D> result;
             
-            for( size_t i = 0 ; i < pts.size() -1;  i ++)
+        for( size_t i = 0 ; i < pts.size() -1;  i ++)
             {
-                Point2D p0 = pts[i > 0 ? i - 1 : i];
-                Point2D p1 = pts[i];
-                Point2D p2 = pts[i + 1];
-                Point2D p3 = pts[i + 2 < pts.size() ? i + 2 : i + 1];
-
-
-                for(int s = 0 ; s < samples_per_segment;s++){
-
-                    double t = double(s) / samples_per_segment;
-                    double t2 = t * t;
-                    double t3 = t2 * t;
-
-                    double x = 0.5 * ((2 * p1.x) + 
-                                       (-p0.x + p2.x) * t + 
-                                       (2*p0.x - 5*p1.x + 4*p2.x - p3.x) * t2 + 
-                                       (-p0.x + 3*p1.x - 3*p2.x + p3.x) * t3);
-
-                    double y = 0.5 * ((2 * p1.y) + 
-                                       (-p0.y + p2.y) * t + 
-                                       (2*p0.y - 5*p1.y + 4*p2.y - p3.y) * t2 + 
-                                       (-p0.y + 3*p1.y - 3*p2.y + p3.y) * t3);
-
-                    result.push_back({x, y});
-
-                }
-
+            Point2D p0 = pts[i > 0 ? i - 1 : i];
+            Point2D p1 = pts[i];
+            Point2D p2 = pts[i + 1];
+            Point2D p3 = pts[i + 2 < pts.size() ? i + 2 : i + 1];
+            for(int s = 0 ; s < samples_per_segment;s++){
+                double t = double(s) / samples_per_segment;
+                double t2 = t * t;
+                double t3 = t2 * t;
+                double x = 0.5 * ((2 * p1.x) + 
+                                   (-p0.x + p2.x) * t + 
+                                   (2*p0.x - 5*p1.x + 4*p2.x - p3.x) * t2 + 
+                                   (-p0.x + 3*p1.x - 3*p2.x + p3.x) * t3);
+                double y = 0.5 * ((2 * p1.y) + 
+                                   (-p0.y + p2.y) * t + 
+                                   (2*p0.y - 5*p1.y + 4*p2.y - p3.y) * t2 + 
+                                   (-p0.y + 3*p1.y - 3*p2.y + p3.y) * t3);
+                result.push_back({x, y});
             }
-            
-
-            result.push_back(pts.back()); // Ensure the last point is included
-
-            return result;
+        }
+        result.push_back(pts.back()); // Ensure the last point is included
+        return result;
 
     }
 
@@ -149,12 +138,9 @@ public:
         publisher_ = this->create_publisher<nav_msgs::msg::Path>("/trajectory_points", 10);
         vel_pub_ = this->create_publisher<std_msgs::msg::Float64MultiArray>("/trajectory_velocities", 10); 
 
-        samples_per_segment_ =
-            this->declare_parameter<int>("smoother.samples_per_segment", 20);
-        max_velocity_ =
-            this->declare_parameter<double>("trajectory.max_velocity", 0.18);
-        acceleration_ =
-            this->declare_parameter<double>("trajectory.acceleration", 0.05);
+        samples_per_segment_ = this->declare_parameter<int>("smoother.samples_per_segment", 20);
+        max_velocity_        = this->declare_parameter<double>("trajectory.max_velocity", 0.18);
+        acceleration_        = this->declare_parameter<double>("trajectory.acceleration", 0.05);
 
         timer_ = this->create_wall_timer(
             std::chrono::seconds(1),

@@ -13,7 +13,7 @@ namespace trajectory_controller {
     // - Smoothness: pulls towards avg of neighbours
     // - Fitness : how well it fits the original path 
 
-    std::vector<Point2D> gradientDescentSmoothing(
+std::vector<Point2D> gradientDescentSmoothing(
         const std::vector<Point2D>& waypoints,
         int num_points,
         double alpha = 0.1,

@@ -70,9 +70,7 @@ size_t findLookaheadPoint(
             double d = std::sqrt(dx*dx + dy*dy);
 
             if(d >= L)
-            {
                 return i;
-            }
         }
         return trajectory.size() - 1;
     }
@@ -82,8 +80,6 @@ size_t findLookaheadPoint(
 
 class ControllerObstacleNode : public rclcpp::Node
 {
-
-
 public: 
     ControllerObstacleNode() : Node("controller_node")
     {
@@ -91,34 +87,31 @@ public:
     min_lookahead_  = this->declare_parameter("controller.min_lookahead",   0.15);
     max_lookahead_  = this->declare_parameter("controller.max_lookahead",   0.60);
     v_max_          = this->declare_parameter("controller.max_linear_vel",  0.18);
-    v_max_acc_       = this->declare_parameter("trajectory.acceleration"  ,  0.15);
+    v_max_acc_      = this->declare_parameter("trajectory.acceleration"  ,  0.15);
     goal_tolerance_ = this->declare_parameter("controller.goal_tolerance",  0.10);
 
-        waypoints_ = trajectory_controller::getWaypoints(this);
+    waypoints_ = trajectory_controller::getWaypoints(this);
 
-        buildTrajectory();
+    buildTrajectory();
 
-        cmd_vel_pub_ = this->create_publisher<geometry_msgs::msg::Twist>(
-            "/cmd_vel",10);
+    cmd_vel_pub_ = this->create_publisher<geometry_msgs::msg::Twist>("/cmd_vel",10);
 
-        error_pub_ = this->create_publisher<std_msgs::msg::Float64MultiArray>(
-            "tracking_error",10);
+    error_pub_ = this->create_publisher<std_msgs::msg::Float64MultiArray>("tracking_error",10);
 
-        actual_path_pub_ = this->create_publisher<nav_msgs::msg::Path>(
-      "/actual_path", 10);
+    actual_path_pub_ = this->create_publisher<nav_msgs::msg::Path>("/actual_path", 10);
         
-        odom_sub_ = this->create_subscription<nav_msgs::msg::Odometry>(
+    odom_sub_ = this->create_subscription<nav_msgs::msg::Odometry>(
             "/odom",10,
         [this](nav_msgs::msg::Odometry::SharedPtr msg){odomCallback(msg); });
 
 
-        path_sub_ = this->create_subscription<visualization_msgs::msg::MarkerArray>(
+    path_sub_ = this->create_subscription<visualization_msgs::msg::MarkerArray>(
       "/path_avoiding", 10,
       [this](visualization_msgs::msg::MarkerArray::SharedPtr msg) {
         pathCallback(msg); });
 
-        // Fallback — if no avoided path received within 3s use Catmull-Rom directly
-        fallback_timer_ = this->create_wall_timer(
+    // Fallback — if no avoided path received within 3s use Catmull-Rom directly
+    fallback_timer_ = this->create_wall_timer(
           std::chrono::milliseconds(100),
           [this]() {
             if (!path_received_) {
@@ -127,12 +120,11 @@ public:
               path_received_ = true;
             }
             fallback_timer_->cancel();
-          });
+        });
 
-        waypoint_reached_pub_ = this->create_publisher<std_msgs::msg::Int32>(
-        "/waypoint_reached", 10);
+    waypoint_reached_pub_ = this->create_publisher<std_msgs::msg::Int32>("/waypoint_reached", 10);
 
-        segment_sub_ = this->create_subscription<trajectory_controller::msg::Segment>(
+    segment_sub_ = this->create_subscription<trajectory_controller::msg::Segment>(
         "/current_segment", 10,
         [this](trajectory_controller::msg::Segment::SharedPtr msg) {
             current_segment_index_ = msg->segment_index;
@@ -142,7 +134,8 @@ public:
             goal_reached_          = false;
             path_received_         = false;  // wait for avoider to replan
             closest_idx_           = 0;
-            RCLCPP_INFO(this->get_logger(),
+        
+        RCLCPP_INFO(this->get_logger(),
                 "New segment %d received, waiting for avoided path...",
                 current_segment_index_);
         });
@@ -169,16 +162,16 @@ private:
 
 
     //ROS Interfaces
-    rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr            cmd_vel_pub_;
-    rclcpp::Publisher<std_msgs::msg::Float64MultiArray>::SharedPtr     error_pub_;
-    rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr                  actual_path_pub_;
-    rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr           odom_sub_;
+    rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr               cmd_vel_pub_;
+    rclcpp::Publisher<std_msgs::msg::Float64MultiArray>::SharedPtr        error_pub_;
+    rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr                     actual_path_pub_;
+    rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr              odom_sub_;
     rclcpp::Subscription<visualization_msgs::msg::MarkerArray>::SharedPtr path_sub_;
-    rclcpp::TimerBase::SharedPtr                                       fallback_timer_;
+    rclcpp::TimerBase::SharedPtr                                          fallback_timer_;
     bool path_received_{false};
 
-    rclcpp::Subscription<trajectory_controller::msg::Segment>::SharedPtr segment_sub_;
-    rclcpp::Publisher<std_msgs::msg::Int32>::SharedPtr waypoint_reached_pub_;
+    rclcpp::Subscription<trajectory_controller::msg::Segment>::SharedPtr  segment_sub_;
+    rclcpp::Publisher<std_msgs::msg::Int32>::SharedPtr                    waypoint_reached_pub_;
     int current_segment_index_{0};
     double segment_goal_x_{0.0};
     double segment_goal_y_{0.0};
@@ -362,17 +355,14 @@ private:
 
         double L = std::clamp(k_lookahead_ * std::abs(rv), min_lookahead_, max_lookahead_);
 
-
         size_t la_idx = trajectory_controller::findLookaheadPoint(
             trajectory_ , rx, ry, L , closest_idx_);
 
         auto& la = trajectory_[la_idx];
 
-
         // Angle to lookahead point in robot frame 
         double angle_to_la = std::atan2(la.y - ry , la.x - rx);
         double alpha       = angle_to_la - ryaw;
-
 
         // Normalize alpha to [-pi] to [pi]
         while(alpha > M_PI) alpha -= 2.0* M_PI;
@@ -392,7 +382,6 @@ private:
          }
 
         double omega_cmd = v_cmd * curvature;
-
 
         // Safety clamp 
         v_cmd = std::clamp(v_cmd, 0.0 , v_max_);
@@ -439,9 +428,7 @@ private:
     {
         cmd_vel_pub_->publish(geometry_msgs::msg::Twist{});
     }
-
 };
-
 
 int main(int argc, char **argv)
 {

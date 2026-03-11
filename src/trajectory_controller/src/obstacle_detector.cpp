@@ -19,13 +19,11 @@ struct Cluster{
   double radius{0.0};
   };
 
-
 // Converts a Laserscan into a flat list of 2d points in the sensor frame
 // Invalid readings are discarded for better estimate of obstacles 
     std::vector<Point2D> scanToPoints(const sensor_msgs::msg::LaserScan::SharedPtr scan)
     {
         std::vector<Point2D> points;
-
         for(size_t i = 0 ; i < scan->ranges.size(); i++)
         {
             double r = scan->ranges[i];
@@ -38,7 +36,7 @@ struct Cluster{
         return points;
     }
 
-// Sequential clustering - groups consecutive scan points that are within
+    // Sequential clustering - groups consecutive scan points that are within
 // thresholds od each other , and are ordered by angle, clusters with fewer than 
 // min_points are dropped as noise
 std::vector<Cluster> clusterPoints(
@@ -133,6 +131,7 @@ public:
 private:
   std::shared_ptr<tf2_ros::Buffer>            tf_buffer_;
   std::shared_ptr<tf2_ros::TransformListener> tf_listener_;
+  
   rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr marker_pub_;
   rclcpp::Subscription<sensor_msgs::msg::LaserScan>::SharedPtr       scan_sub_;
 
@@ -149,7 +148,7 @@ private:
         points,
         cluster_threshold_,
         min_cluster_points_);
-        
+
     // Compute centre and radius
     trajectory_controller::computeClusterProperties(clusters);
 
@@ -216,7 +215,6 @@ private:
 
    }
 };
-
 
 int main(int argc, char **argv)
 {

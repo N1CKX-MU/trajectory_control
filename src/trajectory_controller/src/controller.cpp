@@ -18,10 +18,7 @@
 
 namespace trajectory_controller
 {
-
-
 //Extracts yaw from an odometry message quaternion
-
 double getYaw(const nav_msgs::msg::Odometry::SharedPtr msg)
     {
     tf2::Quaternion q(
@@ -86,8 +83,6 @@ size_t findLookaheadPoint(
 
 class ControllerNode : public rclcpp::Node
 {
-
-
 public: 
     ControllerNode() : Node("controller_node")
     {
@@ -128,8 +123,7 @@ public:
           });
 
 
-        RCLCPP_INFO(this->get_logger(),
-            "Controller node started, Trajectory has %zu points", trajectory_.size());
+    RCLCPP_INFO(this->get_logger(),"Controller node started, Trajectory has %zu points", trajectory_.size());
     }
 
 private: 
@@ -148,12 +142,12 @@ private:
 
 
     //ROS Interfaces
-    rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr            cmd_vel_pub_;
-    rclcpp::Publisher<std_msgs::msg::Float64MultiArray>::SharedPtr     error_pub_;
-    rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr                  actual_path_pub_;
-    rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr           odom_sub_;
+    rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr               cmd_vel_pub_;
+    rclcpp::Publisher<std_msgs::msg::Float64MultiArray>::SharedPtr        error_pub_;
+    rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr                     actual_path_pub_;
+    rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr              odom_sub_;
     rclcpp::Subscription<visualization_msgs::msg::MarkerArray>::SharedPtr path_sub_;
-    rclcpp::TimerBase::SharedPtr                                       fallback_timer_;
+    rclcpp::TimerBase::SharedPtr                                          fallback_timer_;
     bool path_received_{false};
 
     nav_msgs::msg::Path actual_path_msg_;
@@ -397,9 +391,7 @@ private:
     {
         cmd_vel_pub_->publish(geometry_msgs::msg::Twist{});
     }
-
 };
-
 
 int main(int argc, char **argv)
 {

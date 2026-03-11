@@ -47,9 +47,9 @@ namespace trajectory_controller
                     result.push_back({x, y});
                 }
             }
-            result.push_back(pts.back()); // Ensure the last point is included
-            return result;
 
+        result.push_back(pts.back()); // Ensure the last point is included
+        return result;
         }
 } // namespace trajectory_controller
 
@@ -81,7 +81,7 @@ private:
     {
         auto smooth = trajectory_controller::catmullRomSpline(waypoints_, samples_);
 
-        // Light blue — visually distinct from Bezier (red) and gradient (orange)
+        // Light blue — visually distinct from Bezier (red) and gradient (cyan)
         auto arr = trajectory_controller::pathToMarkerArray(
         smooth, "catmull_rom_path", 0, 0.0f, 0.5f, 1.0f);
            
