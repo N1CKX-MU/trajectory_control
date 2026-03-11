@@ -163,7 +163,7 @@ public:
         "obstacle_avoider.learning_rate", 0.05);
 
     iterations_ = this->declare_parameter<int>(
-        "obstacle_avoider.iterations", 800);
+        "obstacle_avoider.iterations", 150);
 
     safe_margin_ = this->declare_parameter<double>(
         "obstacle_avoider.safe_margin", 0.45);

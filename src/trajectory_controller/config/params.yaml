@@ -15,7 +15,7 @@ trajectory_controller:
 
     # ── Trajectory Generator ────────────────────────────────────
     trajectory:
-      max_velocity: 0.18          # m/s — Turtlebot3 Burger limit
+      max_velocity: 0.23          # m/s — Turtlebot3 Burger limit
       acceleration: 0.15          # m/s² — trapezoidal ramp rate
 
     # ── Pure Pursuit Controller ─────────────────────────────────
@@ -23,8 +23,8 @@ trajectory_controller:
       lookahead_gain: 1.5         # L = k * v
       min_lookahead: 0.15         # metres
       max_lookahead: 0.60         # metres
-      max_linear_vel: 0.18        # m/s
-      max_angular_vel: 2.84       # rad/s — Burger hardware limit
+      max_linear_vel: 0.35        # m/s
+      max_angular_vel: 2.94       # rad/s — Burger hardware limit
       goal_tolerance: 0.10        # metres
 
     # ── Obstacle Avoider ────────────────────────────────────────
@@ -32,7 +32,7 @@ trajectory_controller:
       safe_margin: 0.45           # metres beyond obstacle radius
       alpha: 0.6                  # smoothness vs distance weight
       learning_rate: 0.05
-      iterations: 800
+      iterations: 150
 
     # ── Obstacle Detector ───────────────────────────────────────
     obstacle_detector:

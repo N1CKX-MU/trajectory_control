@@ -42,7 +42,7 @@ def generate_launch_description():
              name='rviz2',
              arguments=['-d', PathJoinSubstitution([
                  FindPackageShare('trajectory_controller'),
-                 'rviz', 'visualize_trajectory.rviz'
+                 'rviz', 'compare_graphs.rviz'
              ])],
              output='screen'),
     ])

@@ -91,6 +91,7 @@ public:
     min_lookahead_  = this->declare_parameter("controller.min_lookahead",   0.15);
     max_lookahead_  = this->declare_parameter("controller.max_lookahead",   0.60);
     v_max_          = this->declare_parameter("controller.max_linear_vel",  0.18);
+    v_max_acc_       = this->declare_parameter("trajectory.acceleration"  ,  0.15);
     goal_tolerance_ = this->declare_parameter("controller.goal_tolerance",  0.10);
 
         waypoints_ = trajectory_controller::getWaypoints(this);
@@ -158,6 +159,7 @@ private:
     double max_lookahead_;
     double v_max_;
     double goal_tolerance_;
+    double v_max_acc_;
 
     //State
     std::vector<trajectory_controller::Point2D> waypoints_;
@@ -234,8 +236,8 @@ private:
                 tp.theta = trajectory_.empty() ? 0.0 : trajectory_.back().theta; // Keep last orientation
             }
 
-            double v_up = std::sqrt(2.0 * 0.05 * arc[i]);
-            double v_down = std::sqrt(2.0 * 0.05 * (L - arc[i]));
+            double v_up = std::sqrt(2.0 * v_max_acc_ * arc[i]);
+            double v_down = std::sqrt(2.0 * v_max_acc_ * (L - arc[i]));
             tp.velocity = std::max(std::min({v_max_, v_up, v_down}),0.01);
 
             if(i == 0){
@@ -253,62 +255,69 @@ private:
     }
 
     void pathCallback(visualization_msgs::msg::MarkerArray::SharedPtr msg)
-  {
-    // Extract points from the LINE_STRIP marker
+{
     for (const auto& marker : msg->markers)
     {
-      if (marker.type != visualization_msgs::msg::Marker::LINE_STRIP) continue;
+        if (marker.type != visualization_msgs::msg::Marker::LINE_STRIP) continue;
 
-      std::vector<trajectory_controller::Point2D> path_points;
-      for (const auto& pt : marker.points) {
-        path_points.push_back({pt.x, pt.y});
-      }
-
-      if (path_points.size() < 2) continue;
-
-      // Rebuild trajectory from new path
-      trajectory_.clear();
-      closest_idx_ = 0;
-      goal_reached_ = false;
-
-      // Arc lengths
-      std::vector<double> arc(path_points.size(), 0.0);
-      for (size_t i = 1; i < path_points.size(); i++) {
-        double dx = path_points[i].x - path_points[i-1].x;
-        double dy = path_points[i].y - path_points[i-1].y;
-        arc[i] = arc[i-1] + std::sqrt(dx*dx + dy*dy);
-      }
-      double L = arc.back();
-
-      double t_acc = 0.0;
-      for (size_t i = 0; i < path_points.size(); i++)
-      {
-        trajectory_controller::TrajectoryPoint tp;
-        tp.x = path_points[i].x;
-        tp.y = path_points[i].y;
-        tp.theta = (i < path_points.size()-1)
-          ? std::atan2(path_points[i+1].y - path_points[i].y,
-                       path_points[i+1].x - path_points[i].x)
-          : (trajectory_.empty() ? 0.0 : trajectory_.back().theta);
-        double v_up   = std::sqrt(2.0 * 0.05 * arc[i]);
-        double v_down = std::sqrt(2.0 * 0.05 * (L - arc[i]));
-        tp.velocity   = std::max(std::min({v_max_, v_up, v_down}), 0.01);
-        if (i == 0) {
-          tp.time = 0.0;
-        } else {
-          double ds = arc[i] - arc[i-1];
-          double va = 0.5 * (trajectory_.back().velocity + tp.velocity);
-          t_acc += ds / va;
-          tp.time = t_acc;
+        std::vector<trajectory_controller::Point2D> path_points;
+        for (const auto& pt : marker.points) {
+            path_points.push_back({pt.x, pt.y});
         }
-        trajectory_.push_back(tp);
-      }
 
-      path_received_ = true;
-      RCLCPP_INFO(this->get_logger(),
-        "Received new avoided path with %zu points", trajectory_.size());
+        if (path_points.size() < 2) continue;
+
+        trajectory_.clear();
+        closest_idx_ = 0;
+        goal_reached_ = false;
+
+        // Arc lengths
+        std::vector<double> arc(path_points.size(), 0.0);
+        for (size_t i = 1; i < path_points.size(); i++) {
+            double dx = path_points[i].x - path_points[i-1].x;
+            double dy = path_points[i].y - path_points[i-1].y;
+            arc[i] = arc[i-1] + std::sqrt(dx*dx + dy*dy);
+        }
+        double L = arc.back();
+
+        double t_acc = 0.0;
+        for (size_t i = 0; i < path_points.size(); i++)
+        {
+            trajectory_controller::TrajectoryPoint tp;
+            tp.x = path_points[i].x;
+            tp.y = path_points[i].y;
+            tp.theta = (i < path_points.size()-1)
+                ? std::atan2(path_points[i+1].y - path_points[i].y,
+                             path_points[i+1].x - path_points[i].x)
+                : (trajectory_.empty() ? 0.0 : trajectory_.back().theta);
+
+            // double v_up   = std::sqrt(2.0 * v_max_acc_ * arc[i]);
+            // double v_down = std::sqrt(2.0 * v_max_acc_ * (L - arc[i])); // <- param now
+            // tp.velocity   = std::max(std::min({v_max_, v_up, v_down}), 0.01);
+
+            // Use constant velocity for short segments — trapezoidal is too slow on <2m paths
+            double v_up   = std::sqrt(2.0 * v_max_acc_ * arc[i]);
+            double v_down = std::sqrt(2.0 * v_max_acc_ * (L - arc[i]));
+            double v_trap = std::min({v_max_, v_up, v_down});
+            // Floor at 60% of max so short segments don't crawl
+            tp.velocity   = std::max(v_trap, v_max_ * 0.6);
+
+            if (i == 0) {
+                tp.time = 0.0;
+            } else {
+                double ds = arc[i] - arc[i-1];
+                double va = 0.5 * (trajectory_.back().velocity + tp.velocity);
+                t_acc += ds / va;
+                tp.time = t_acc;
+            }
+            trajectory_.push_back(tp);
+        }
+
+        path_received_ = true;
+        RCLCPP_INFO(this->get_logger(),
+            "Received new avoided path with %zu points", trajectory_.size());
+        }
     }
-  }
 
     void odomCallback(nav_msgs::msg::Odometry::SharedPtr msg)
     {
@@ -337,7 +346,7 @@ private:
 
         
 
-        if (dist_to_segment_goal < goal_tolerance_) {
+        if (dist_to_segment_goal < goal_tolerance_ * 4.0) {
           RCLCPP_INFO(this->get_logger(),
             "Waypoint %d reached!", current_segment_index_);
           std_msgs::msg::Int32 reached_msg;
@@ -377,16 +386,11 @@ private:
         double v_cmd = trajectory_[closest_idx_].velocity;
 
         // Slow down when approaching segment goal
-        if (dist_to_segment_goal < 0.5) {
+        if (dist_to_segment_goal < 0.1) {
           v_cmd *= (dist_to_segment_goal / 0.5);
-          v_cmd = std::max(v_cmd, 0.04);
-        }
+          v_cmd = std::max(v_cmd, 0.18);
+         }
 
-        // Slow down when approaching segment goal
-        if (dist_to_segment_goal < 0.5) {
-          v_cmd *= (dist_to_segment_goal / 0.5);
-          v_cmd = std::max(v_cmd, 0.04);
-        }
         double omega_cmd = v_cmd * curvature;
 
 
