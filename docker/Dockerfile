@@ -50,7 +50,7 @@ ENV TURTLEBOT3_MODEL=burger
 ENV GAZEBO_MODEL_DATABASE_URI=""
 ENV GAZEBO_MODEL_PATH=/usr/share/gazebo-11/models:/opt/ros/humble/share/turtlebot3_gazebo/models
 ENV XDG_RUNTIME_DIR=/tmp/runtime-root
-COPY Makefile.workspace /ros2_ws/Makefile
+# COPY Makefile.workspace /ros2_ws/Makefile
 COPY docker/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 

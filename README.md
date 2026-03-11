@@ -12,7 +12,8 @@ Implements three path smoothing algorithms (Catmull-Rom, Bezier, Gradient Descen
 git clone https://github.com/N1CKX-MU/trajectory_control.git
 cd trajectory_control
 xhost +local:docker
-make docker        # starts container and drops you inside
+make docker-build        # starts container and drops you inside
+make build
 make demo          # builds + launches everything
 ```
 
