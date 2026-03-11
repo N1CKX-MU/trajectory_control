@@ -4,7 +4,7 @@
 #include "trajectory_controller/types.hpp"
 
 // ─── Copy algorithm functions here for testing ───────────────────────────────
-// (same functions from your nodes, pulled into test scope)
+// (same functions from nodes, pulled into test scope)
 
 namespace trajectory_controller
 {
@@ -102,7 +102,7 @@ std::vector<TrajectoryPoint> generateTrajectory(
 
 } // namespace trajectory_controller
 
-// ─── Helper ──────────────────────────────────────────────────────────────────
+// Helper 
 
 double dist(const trajectory_controller::Point2D& a,
             const trajectory_controller::Point2D& b)
@@ -114,7 +114,7 @@ const std::vector<trajectory_controller::Point2D> TEST_WAYPOINTS = {
   {0.0,0.0},{1.0,0.5},{2.0,2.0},{3.0,2.5},{4.0,1.5},{5.0,0.5},{6.0,1.0}
 };
 
-// ─── Catmull-Rom Tests ────────────────────────────────────────────────────────
+//  Catmull-Rom Tests 
 
 TEST(CatmullRomTest, OutputSizeIsCorrect)
 {
@@ -122,6 +122,7 @@ TEST(CatmullRomTest, OutputSizeIsCorrect)
   // 6 segments * 20 samples + 1 endpoint
   EXPECT_EQ(path.size(), (size_t)121);
 }
+
 
 TEST(CatmullRomTest, StartsAtFirstWaypoint)
 {
@@ -132,6 +133,7 @@ TEST(CatmullRomTest, StartsAtFirstWaypoint)
 
 TEST(CatmullRomTest, EndsAtLastWaypoint)
 {
+
   auto path = trajectory_controller::catmullRomSmooth(TEST_WAYPOINTS, 20);
   EXPECT_NEAR(path.back().x, TEST_WAYPOINTS.back().x, 1e-6);
   EXPECT_NEAR(path.back().y, TEST_WAYPOINTS.back().y, 1e-6);
@@ -139,6 +141,7 @@ TEST(CatmullRomTest, EndsAtLastWaypoint)
 
 TEST(CatmullRomTest, NoLargeJumps)
 {
+
   auto path = trajectory_controller::catmullRomSmooth(TEST_WAYPOINTS, 20);
   for (size_t i = 1; i < path.size(); i++)
     EXPECT_LT(dist(path[i], path[i-1]), 0.5)
@@ -147,6 +150,7 @@ TEST(CatmullRomTest, NoLargeJumps)
 
 TEST(CatmullRomTest, PathStaysWithinBounds)
 {
+
   auto path = trajectory_controller::catmullRomSmooth(TEST_WAYPOINTS, 20);
   for (const auto& p : path) {
     EXPECT_GE(p.x, -0.5);
@@ -165,7 +169,7 @@ TEST(CatmullRomTest, SingleSegmentWorks)
   EXPECT_NEAR(path.back().y, 1.0, 1e-6);
 }
 
-// ─── Gradient Descent Tests ───────────────────────────────────────────────────
+// Gradient Descent Tests 
 
 TEST(GradientDescentTest, OutputSizeIsCorrect)
 {
@@ -194,9 +198,11 @@ TEST(GradientDescentTest, HighAlphaProducesSmootherPath)
 
   // Measure total curvature (sum of direction changes)
   auto curvature = [](const std::vector<trajectory_controller::Point2D>& p) {
+
     double total = 0.0;
     for (size_t i = 1; i < p.size()-1; i++) {
       double ax = p[i].x - p[i-1].x, ay = p[i].y - p[i-1].y;
+
       double bx = p[i+1].x - p[i].x, by = p[i+1].y - p[i].y;
       double cross = std::abs(ax*by - ay*bx);
       total += cross;
@@ -214,7 +220,9 @@ TEST(GradientDescentTest, PathDoesNotDriftFarFromWaypoints)
 
   // Every path point should be within 2m of the nearest waypoint
   for (const auto& p : path) {
+
     double min_d = std::numeric_limits<double>::max();
+    
     for (const auto& wp : TEST_WAYPOINTS)
       min_d = std::min(min_d, dist(p, wp));
     EXPECT_LT(min_d, 2.0) << "Path drifted far from waypoints at ("
@@ -222,7 +230,7 @@ TEST(GradientDescentTest, PathDoesNotDriftFarFromWaypoints)
   }
 }
 
-// ─── Trajectory Generator Tests ───────────────────────────────────────────────
+//  Trajectory Generator Tests
 
 TEST(TrajectoryGeneratorTest, OutputSizeMatchesInput)
 {
@@ -284,7 +292,7 @@ TEST(TrajectoryGeneratorTest, PositionsMatchInputPath)
   }
 }
 
-// ─── Waypoint Tests ───────────────────────────────────────────────────────────
+//  Waypoint Tests 
 
 TEST(WaypointTest, DefaultWaypointsAreValid)
 {
@@ -304,7 +312,7 @@ TEST(WaypointTest, AllWaypointsAreFinite)
   }
 }
 
-// ─── Main ─────────────────────────────────────────────────────────────────────
+//  Main 
 
 int main(int argc, char **argv)
 {
