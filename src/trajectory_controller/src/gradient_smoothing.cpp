@@ -1,11 +1,17 @@
 #include <rclcpp/rclcpp.hpp>
 #include "trajectory_controller/types.hpp"
+#include "trajectory_controller/viz_utils.hpp"
 #include <visualization_msgs/msg/marker_array.hpp>
 #include <geometry_msgs/msg/point.hpp>
 #include <vector>
 
 
 namespace trajectory_controller {
+
+    // Gradient descent path smoothing
+    // iteratively adjusts each interior point by balancing 2 thing:
+    // - Smoothness: pulls towards avg of neighbours
+    // - Fitness : how well it fits the original path 
 
     std::vector<Point2D> gradientDescentSmoothing(
         const std::vector<Point2D>& waypoints,
@@ -14,6 +20,8 @@ namespace trajectory_controller {
         double learning_rate = 0.01,
         int iterations = 100)
     {
+
+        // Build an initial path by lineary interpolating b/w waypoint pair
         std::vector<Point2D> path;
 
         for(size_t i = 0 ; i < waypoints.size() - 1; i++)
@@ -30,7 +38,7 @@ namespace trajectory_controller {
         }
         path.push_back(waypoints.back());
 
-        std::vector<Point2D> original = path;
+        std::vector<Point2D> original = path; // Keep a copy to compute fitness
 
         for(int iter = 0 ; iter < iterations; iter++)
         {
@@ -38,10 +46,11 @@ namespace trajectory_controller {
 
             for(size_t i = 1 ; i < path.size() - 1; i++)
             {
+                // Smoothness gradient - second order finite difference 
                 double smooth_x = path[i-1].x - 2*path[i].x + path[i+1].x;
                 double smooth_y = path[i-1].y - 2*path[i].y + path[i+1].y;
 
-                // Distance gradient — pulls point back towards original position
+                // Fitness gradient — pulls point back towards original position
                 double dist_x = original[i].x - path[i].x;
                 double dist_y = original[i].y - path[i].y;
 
@@ -71,20 +80,13 @@ public:
         timer_ = this->create_wall_timer(
             std::chrono::seconds(1),
             [this](){publish(); });
+       
+        num_points_    = this->declare_parameter<int>("smoother.samples_per_segment"      , 100);
+        alpha_         = this->declare_parameter<double>("smoother.gradient_alpha"        , 0.8);
+        learning_rate_ = this->declare_parameter<double>("smoother.gradient_learning_rate", 0.1);
+        iterations_    = this->declare_parameter<int>("smoother.gradient_iterations"      , 500);
 
         RCLCPP_INFO(this->get_logger(), "Gradient Smoothing node started ");
-        
-        num_points_ = this->declare_parameter<int>("smoother.samples_per_segment", 100);
-
-        alpha_ = this->declare_parameter<double>("smoother.gradient_alpha", 0.8);
-
-        learning_rate_ = this->declare_parameter<double>(
-            "smoother.gradient_learning_rate", 0.1);
-
-        iterations_ = this->declare_parameter<int>(
-            "smoother.gradient_iterations", 500);
-
-        
 
     }
 
@@ -98,42 +100,18 @@ private:
     double learning_rate_;
     int iterations_;
 
-    void publish(){
-        auto smooth = trajectory_controller::gradientDescentSmoothing(
-            waypoints_,
-            num_points_,
-            alpha_,
-            learning_rate_,
-            iterations_);
-            
-        // Function call 
+    void publish()
+  {
+    auto smooth = trajectory_controller::gradientDescentSmoothing(
+      waypoints_, num_points_, alpha_, learning_rate_, iterations_);
 
-        visualization_msgs::msg::MarkerArray marker_array;
-        visualization_msgs::msg::Marker line;
-        line.header.frame_id = "odom";
-        line.header.stamp = this->now();
-        line.ns = "gradient_path";
-        line.id = 100;
-        line.type = visualization_msgs::msg::Marker::LINE_STRIP;
-        line.action = visualization_msgs::msg::Marker::ADD;
-        line.scale.x = 0.05;
-        line.color.a = 1.0; // Alpha
-        line.color.r = 0.0; // Red
-        line.color.g = 1.0; // Green
-        line.color.b = 1.0; // Blue
-        line.pose.orientation.w = 1.0;
+    // Cyan — visually distinct from Catmull-Rom (blue), Bezier (red)
+    auto arr = trajectory_controller::pathToMarkerArray(
+      smooth, "gradient_path", 0, 0.0f, 1.0f, 1.0f);
 
-        for (const auto& p : smooth) {
-      geometry_msgs::msg::Point pt;
-      pt.x = p.x;
-      pt.y = p.y;
-      pt.z = 0.0;
-      line.points.push_back(pt);
-        }
-
-        marker_array.markers.push_back(line);
-        publisher_->publish(marker_array);
-    }
+    arr.markers[0].header.stamp = this->now();
+    publisher_->publish(arr);
+  }
 
 };
 

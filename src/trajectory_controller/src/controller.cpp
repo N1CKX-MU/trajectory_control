@@ -19,10 +19,12 @@
 namespace trajectory_controller
 {
 
-    double getYaw(const nav_msgs::msg::Odometry::SharedPtr msg)
-    {
 
-        tf2::Quaternion q(
+//Extracts yaw from an odometry message quaternion
+
+double getYaw(const nav_msgs::msg::Odometry::SharedPtr msg)
+    {
+    tf2::Quaternion q(
             msg->pose.pose.orientation.x,
             msg->pose.pose.orientation.y,
             msg->pose.pose.orientation.z,
@@ -30,7 +32,10 @@ namespace trajectory_controller
             return tf2::getYaw(q);
     }
 
-    size_t findClosestPoint(
+// Finds the trajectory point closest to the robot's current position
+// Used to anchor the lookahead search and compute cross-track error
+// Pure pursuit technique used to control the robot
+size_t findClosestPoint(
         const std::vector<TrajectoryPoint>& trajectory,
         double rx, double ry)
     {
@@ -53,15 +58,16 @@ namespace trajectory_controller
 
     }
 
-
-    size_t findLookaheadPoint(
+// Finds the first trajectory point atleast distance L ahead of the robot.
+// Searching forward from start_idx avoids jumping back to already-passed points. 
+size_t findLookaheadPoint(
         const std::vector<TrajectoryPoint>& trajectory,
         double rx, double ry,
         double L,
         size_t start_idx
     )
     {
-        for(size_t i = start_idx; i < trajectory.size();i++)
+        for(size_t i = start_idx; i < trajectory.size();i++) // starts from start index
         {
             double dx = trajectory[i].x - rx;
             double dy = trajectory[i].y - ry;
@@ -74,7 +80,7 @@ namespace trajectory_controller
         }
         return trajectory.size() - 1;
     }
-}
+} // namespace trajectory_controller
 
 
 
@@ -91,31 +97,26 @@ public:
     v_max_          = this->declare_parameter("controller.max_linear_vel",  0.18);
     goal_tolerance_ = this->declare_parameter("controller.goal_tolerance",  0.10);
 
-        waypoints_ = trajectory_controller::getWaypoints(this);
+    waypoints_ = trajectory_controller::getWaypoints(this);
+    buildTrajectory();
 
-        buildTrajectory();
-
-        cmd_vel_pub_ = this->create_publisher<geometry_msgs::msg::Twist>(
-            "/cmd_vel",10);
-
-        error_pub_ = this->create_publisher<std_msgs::msg::Float64MultiArray>(
-            "tracking_error",10);
-
-        actual_path_pub_ = this->create_publisher<nav_msgs::msg::Path>(
-      "/actual_path", 10);
+    cmd_vel_pub_ = this->create_publisher<geometry_msgs::msg::Twist>("/cmd_vel",10);
+    error_pub_ = this->create_publisher<std_msgs::msg::Float64MultiArray>("tracking_error",10);
+    actual_path_pub_ = this->create_publisher<nav_msgs::msg::Path>("/actual_path", 10);
         
-        odom_sub_ = this->create_subscription<nav_msgs::msg::Odometry>(
-            "/odom",10,
+    odom_sub_ = this->create_subscription<nav_msgs::msg::Odometry>(
+        "/odom",10,
         [this](nav_msgs::msg::Odometry::SharedPtr msg){odomCallback(msg); });
 
-
-        path_sub_ = this->create_subscription<visualization_msgs::msg::MarkerArray>(
+    // Listen for an avoided path from obstacles from obstacle_avoider_node
+    // if None arrives the fallback timer releases the controller to use the catmull Rom trajectory
+    path_sub_ = this->create_subscription<visualization_msgs::msg::MarkerArray>(
       "/path_avoiding", 10,
       [this](visualization_msgs::msg::MarkerArray::SharedPtr msg) {
         pathCallback(msg); });
 
-        // Fallback — if no avoided path received within 3s use Catmull-Rom directly
-        fallback_timer_ = this->create_wall_timer(
+    // Fallback — if no avoided path received within 3s use Catmull-Rom directly
+    fallback_timer_ = this->create_wall_timer(
           std::chrono::milliseconds(100),
           [this]() {
             if (!path_received_) {
@@ -156,6 +157,10 @@ private:
     bool path_received_{false};
 
     nav_msgs::msg::Path actual_path_msg_;
+
+
+    // Builds the internal Catmull-Rom trajectory when no avoider is running
+    // Velocity is assigned with trapezoidal profile (ramp up , ramp down , cruise)
 
     void buildTrajectory()
     {
@@ -224,6 +229,10 @@ private:
             trajectory_.push_back(tp);
         }
     }
+
+
+    // Rebuilds the trajectory when the obstacle avoider publishes a new safe path 
+    // this replaces the internal Catmull-Rom path entirely if it recieves a new path
 
     void pathCallback(visualization_msgs::msg::MarkerArray::SharedPtr msg)
   {
@@ -316,6 +325,7 @@ private:
         // find closest points and dont search backwards
         closest_idx_ = trajectory_controller::findClosestPoint(trajectory_, rx, ry);
 
+        // Lookahead distance scaled with speed
         double L = std::clamp(k_lookahead_ * std::abs(rv), min_lookahead_, max_lookahead_);
 
 
@@ -342,13 +352,11 @@ private:
         double v_cmd = trajectory_[closest_idx_].velocity;
         double omega_cmd = v_cmd * curvature;
 
-
         // Safety clamp 
         v_cmd = std::clamp(v_cmd, 0.0 , v_max_);
         omega_cmd = std::clamp(omega_cmd,-2.84,2.84);
 
         //Publish cmd_vel
-
         geometry_msgs::msg::Twist twist;
         twist.linear.x = v_cmd;
         twist.angular.z = omega_cmd;
@@ -384,6 +392,7 @@ private:
         actual_path_pub_->publish(actual_path_msg_);
     }
 
+    // To stop the bot once it reaches goal
     void publishZeroVelocity()
     {
         cmd_vel_pub_->publish(geometry_msgs::msg::Twist{});

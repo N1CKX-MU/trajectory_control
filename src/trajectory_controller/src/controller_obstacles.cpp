@@ -20,7 +20,7 @@
 
 namespace trajectory_controller
 {
-
+// Extract yaw (heading) from an odometry message
     double getYaw(const nav_msgs::msg::Odometry::SharedPtr msg)
     {
 
@@ -31,8 +31,8 @@ namespace trajectory_controller
             msg->pose.pose.orientation.w);
             return tf2::getYaw(q);
     }
-
-    size_t findClosestPoint(
+// Find the closest trajectory point to the robot's current position
+size_t findClosestPoint(
         const std::vector<TrajectoryPoint>& trajectory,
         double rx, double ry)
     {
@@ -55,8 +55,8 @@ namespace trajectory_controller
 
     }
 
-
-    size_t findLookaheadPoint(
+// Find the first trajectory point that is at least distance L ahead of the robot
+size_t findLookaheadPoint(
         const std::vector<TrajectoryPoint>& trajectory,
         double rx, double ry,
         double L,
@@ -186,6 +186,7 @@ private:
 
     nav_msgs::msg::Path actual_path_msg_;
 
+    //  Generate a smooth trajectory from waypoints using Catmull-Rom and trapezoidal velocity
     void buildTrajectory()
     {
         std::vector<trajectory_controller::Point2D> smooth;
@@ -253,7 +254,8 @@ private:
             trajectory_.push_back(tp);
         }
     }
-
+    
+    // Callback to receive avoided path from planner
     void pathCallback(visualization_msgs::msg::MarkerArray::SharedPtr msg)
 {
     for (const auto& marker : msg->markers)
@@ -291,11 +293,7 @@ private:
                              path_points[i+1].x - path_points[i].x)
                 : (trajectory_.empty() ? 0.0 : trajectory_.back().theta);
 
-            // double v_up   = std::sqrt(2.0 * v_max_acc_ * arc[i]);
-            // double v_down = std::sqrt(2.0 * v_max_acc_ * (L - arc[i])); // <- param now
-            // tp.velocity   = std::max(std::min({v_max_, v_up, v_down}), 0.01);
-
-            // Use constant velocity for short segments — trapezoidal is too slow on <2m paths
+            
             double v_up   = std::sqrt(2.0 * v_max_acc_ * arc[i]);
             double v_down = std::sqrt(2.0 * v_max_acc_ * (L - arc[i]));
             double v_trap = std::min({v_max_, v_up, v_down});
@@ -318,6 +316,8 @@ private:
             "Received new avoided path with %zu points", trajectory_.size());
         }
     }
+
+    // Compute control commands and publish
 
     void odomCallback(nav_msgs::msg::Odometry::SharedPtr msg)
     {
@@ -434,7 +434,7 @@ private:
 
         actual_path_pub_->publish(actual_path_msg_);
     }
-
+    // Publish zero velocity to stop the robot
     void publishZeroVelocity()
     {
         cmd_vel_pub_->publish(geometry_msgs::msg::Twist{});

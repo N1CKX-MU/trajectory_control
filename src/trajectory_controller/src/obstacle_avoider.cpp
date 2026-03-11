@@ -2,6 +2,7 @@
 #include <geometry_msgs/msg/point.hpp>
 #include <visualization_msgs/msg/marker_array.hpp>
 #include "trajectory_controller/types.hpp"
+#include "trajectory_controller/viz_utils.hpp"
 #include <cmath>
 #include <vector>
 #include "trajectory_controller/msg/segment.hpp"
@@ -9,30 +10,16 @@
 
 namespace trajectory_controller
 {
-// Catmull-Rom — same as before
-std::vector<Point2D> catmullRomSmooth(
-  const std::vector<Point2D>& pts, int samples)
-{
-  std::vector<Point2D> result;
-  for (size_t i = 0; i < pts.size() - 1; i++)
-  {
-    Point2D p0 = pts[i > 0 ? i-1 : i];
-    Point2D p1 = pts[i];
-    Point2D p2 = pts[i+1];
-    Point2D p3 = pts[i+2 < pts.size() ? i+2 : i+1];
-    for (int s = 0; s < samples; s++)
-    {
-      double t  = (double)s / samples;
-      double t2 = t*t, t3 = t2*t;
-      result.push_back({
-        0.5*((2*p1.x)+(-p0.x+p2.x)*t+(2*p0.x-5*p1.x+4*p2.x-p3.x)*t2+(-p0.x+3*p1.x-3*p2.x+p3.x)*t3),
-        0.5*((2*p1.y)+(-p0.y+p2.y)*t+(2*p0.y-5*p1.y+4*p2.y-p3.y)*t2+(-p0.y+3*p1.y-3*p2.y+p3.y)*t3)
-      });
-    }
-  }
-  result.push_back(pts.back());
-  return result;
-}
+
+// Gradient descent path deformation with obstacle repulsion
+// the path is iteratively chosen with 3 factors- 
+//    - Smoothness - pulls each point to the avg of the neighbours 
+//    - Fitness    - pulls back to the original path
+//    - Repulsion  - pushes each point away from the nearby obstacles 
+
+// The Repulsion direction is locked to the perpendicular of the original path
+// using a cross product ensure it always goes around the vehicle 
+// it also prevent side-switching / flickering if the obstacle is in the middle of the original path 
 
 std::vector<Point2D> avoidObstacles(
     const std::vector<Point2D>& path,
@@ -45,7 +32,7 @@ std::vector<Point2D> avoidObstacles(
     {
 
         std::vector<Point2D> result = path;
-        std::vector<Point2D> original = path;
+        std::vector<Point2D> original = path; // fixed reference for fitness & side selection
 
         for( int iter = 0; iter < iterations; iter++)
         {
@@ -74,7 +61,7 @@ std::vector<Point2D> avoidObstacles(
 
                     if(d < safe_r && d > 1e-6)
                     {
-                        // Determine which side to go around — use cross product
+                        // Determine which side to go around -  use cross product
                         // of path direction vs obstacle direction
                         // This is computed once from original path so it never flips
                         double path_dx = 0.0, path_dy = 0.0;
@@ -122,7 +109,13 @@ class ObstacleAvoiderNode : public rclcpp::Node
 public:
   ObstacleAvoiderNode() : Node("obstacle_avoider_node")
   {
-    waypoints_ = trajectory_controller::getWaypoints(this);
+    // Parameters declared before subscriptions so they're available immediately
+    samples_       = this->declare_parameter<int>("smoother.samples_per_segment", 20);
+    alpha_         = this->declare_parameter<double>("obstacle_avoider.alpha", 0.6);
+    learning_rate_ = this->declare_parameter<double>("obstacle_avoider.learning_rate", 0.05);
+    iterations_    = this->declare_parameter<int>("obstacle_avoider.iterations", 150);
+    safe_margin_   = this->declare_parameter<double>("obstacle_avoider.safe_margin", 0.45);
+
 
     // Publisher — the safe avoided path
     path_pub_ = this->create_publisher<visualization_msgs::msg::MarkerArray>(
@@ -134,11 +127,11 @@ public:
       [this](visualization_msgs::msg::MarkerArray::SharedPtr msg) {
         obstacleCallback(msg); });
 
-    // Publish at 1Hz
     timer_ = this->create_wall_timer(
       std::chrono::seconds(1),
       [this]() { publish(); });
 
+    // New segment from waypoint_manager - triggeres fresh path computation
     segment_sub_ = this->create_subscription<trajectory_controller::msg::Segment>(
       "/current_segment", 10,
       [this](trajectory_controller::msg::Segment::SharedPtr msg) {
@@ -151,22 +144,6 @@ public:
           msg->start_x, msg->start_y,
           msg->goal_x, msg->goal_y);
       });
-
-    
-    samples_ = this->declare_parameter<int>(
-        "smoother.samples_per_segment", 20);
-
-    alpha_ = this->declare_parameter<double>(
-        "obstacle_avoider.alpha", 0.6);
-
-    learning_rate_ = this->declare_parameter<double>(
-        "obstacle_avoider.learning_rate", 0.05);
-
-    iterations_ = this->declare_parameter<int>(
-        "obstacle_avoider.iterations", 150);
-
-    safe_margin_ = this->declare_parameter<double>(
-        "obstacle_avoider.safe_margin", 0.45);
 
     RCLCPP_INFO(this->get_logger(),
         "Obstacle Avoider params: alpha=%.2f lr=%.3f iter=%d margin=%.2f",
@@ -230,7 +207,7 @@ private:
     // Build two-point path for this segment
     // Build segment path with intermediate points for smoother avoidance
     std::vector<trajectory_controller::Point2D> segment_path;
-    int n_interp = 5;
+    int n_interp = 10;
     for (int i = 0; i <= n_interp; i++) {
       double t = static_cast<double>(i) / n_interp;
       segment_path.push_back({
@@ -239,45 +216,19 @@ private:
       });
     }
 
-    auto smooth = segment_path;  // already interpolated, no need for catmull on 2 points
-
-    // Deform around detected obstacles
     auto safe = trajectory_controller::avoidObstacles(
-        smooth,
-        obstacles_,
-        alpha_,
-        learning_rate_,
-        iterations_,
-        safe_margin_);
+      segment_path, obstacles_, alpha_, learning_rate_, iterations_, safe_margin_);
 
-    // Publish as purple line
-    visualization_msgs::msg::MarkerArray arr;
-    visualization_msgs::msg::Marker line;
+    // Purple — visually distinct from all smoother paths
+    auto arr = trajectory_controller::pathToMarkerArray(
+      safe, "avoiding", 0, 0.5f, 0.0f, 1.0f, 0.04f);
 
-    line.header.frame_id    = "odom";
-    line.header.stamp       = this->now();
-    line.ns                 = "avoiding";
-    line.id                 = 0;
-    line.type               = visualization_msgs::msg::Marker::LINE_STRIP;
-    line.action             = visualization_msgs::msg::Marker::ADD;
-    line.scale.x            = 0.04;
-    line.color.r            = 0.5;
-    line.color.g            = 0.0;
-    line.color.b            = 1.0;
-    line.color.a            = 1.0;
-    line.pose.orientation.w = 1.0;
-
-    for (const auto& p : safe) {
-      geometry_msgs::msg::Point pt;
-      pt.x = p.x;
-      pt.y = p.y;
-      pt.z = 0.0;
-      line.points.push_back(pt);
-    }
-
-    arr.markers.push_back(line);
+    arr.markers[0].header.stamp = this->now();
     path_pub_->publish(arr);
     path_computed_ = true;
+
+    RCLCPP_INFO(this->get_logger(),
+      "Published avoided path for segment %d", current_segment_.segment_index);
   }
 };
 

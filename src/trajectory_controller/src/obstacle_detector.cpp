@@ -13,13 +13,15 @@
 
 namespace trajectory_controller
 {
+struct Cluster{
+  std::vector<Point2D> points;
+  Point2D centre;
+  double radius{0.0};
+  };
 
-    struct Cluster{
-        std::vector<Point2D> points;
-        Point2D centre;
-        double radius{0.0};
-    };
 
+// Converts a Laserscan into a flat list of 2d points in the sensor frame
+// Invalid readings are discarded for better estimate of obstacles 
     std::vector<Point2D> scanToPoints(const sensor_msgs::msg::LaserScan::SharedPtr scan)
     {
         std::vector<Point2D> points;
@@ -36,41 +38,9 @@ namespace trajectory_controller
         return points;
     }
 
-
-    // std::vector<Cluster> clusterPoints(
-    //     const std::vector<Point2D>& points,
-    //     double cluster_threshold = 0.2)
-    // {
-    //     std::vector<Cluster> clusters;
-    //     std::vector<bool> visited(points.size(),false);
-
-    //     for(size_t i = 0 ; i < points.size();i++){
-    //         if(visited[i]) continue;
-
-    //         Cluster cluster;
-    //         cluster.points.push_back(points[i]);
-    //         visited[i] = true;
-
-    //         //Find all points within threshold and add to cluster
-
-    //         for(size_t j = i + 1;j < points.size(); j++){
-    //             if(visited[j]) continue;
-
-    //             double dx = points[j].x - points[i].x;
-    //             double dy = points[j].y - points[i].y;
-    //             double d = std::sqrt(dx*dx + dy*dy);
-
-    //             if(d < cluster_threshold){
-    //                 cluster.points.push_back(points[j]);
-    //                 visited[j] = true;
-    //             }
-    //         }
-    //         clusters.push_back(cluster);
-    //     }
-        
-    //     return clusters;
-    // }
-
+// Sequential clustering - groups consecutive scan points that are within
+// thresholds od each other , and are ordered by angle, clusters with fewer than 
+// min_points are dropped as noise
 std::vector<Cluster> clusterPoints(
   const std::vector<Point2D>& points,
   double cluster_threshold,int min_cluster_points)
@@ -103,35 +73,10 @@ std::vector<Cluster> clusterPoints(
   return clusters;
 }
 
-void mergeClusters(std::vector<Cluster>& clusters, double merge_dist = 0.35)
-{
-  for(size_t i = 0; i < clusters.size(); i++)
-  {
-    for(size_t j = i + 1; j < clusters.size(); )
-    {
-      double dx = clusters[i].centre.x - clusters[j].centre.x;
-      double dy = clusters[i].centre.y - clusters[j].centre.y;
-      double d = std::hypot(dx,dy);
+// Compute centroid and radius of each cluster
+// a slight buffer is also added so that it takes the obstacles 
+// with a slightly bigger radius
 
-      if(d < merge_dist)
-      {
-        clusters[i].points.insert(
-            clusters[i].points.end(),
-            clusters[j].points.begin(),
-            clusters[j].points.end());
-
-        clusters.erase(clusters.begin() + j);
-      }
-      else
-      {
-        j++;
-      }
-    }
-  }
-}
-
-
-    // Compute centre and radius of each cluster
 void computeClusterProperties(std::vector<Cluster>& clusters)
 {
   for (auto& c : clusters)
@@ -144,21 +89,6 @@ void computeClusterProperties(std::vector<Cluster>& clusters)
     }
     c.centre.x = sum_x / c.points.size();
     c.centre.y = sum_y / c.points.size();
-
-    // double min_d = 1e9;
-    // Point2D best;
-
-    // for (const auto& p : c.points)
-    // {
-    // double d = std::hypot(p.x, p.y);
-    // if (d < min_d)
-    // {
-    //     min_d = d;
-    //     best = p;
-    // }
-    // }
-
-    // c.centre = best;
 
     // Radius = max distance from centre to any point
     double max_r = 0.0;
@@ -185,18 +115,16 @@ public:
 
     marker_pub_ = this->create_publisher<visualization_msgs::msg::MarkerArray>(
       "/detected_obstacles", 10);
-
     scan_sub_ = this->create_subscription<sensor_msgs::msg::LaserScan>(
       "/scan", 10,
       [this](sensor_msgs::msg::LaserScan::SharedPtr msg) { scanCallback(msg); });
-
-
 
     cluster_threshold_ = this->declare_parameter<double>(
         "obstacle_detector.cluster_threshold", 0.25);
 
     min_cluster_points_ = this->declare_parameter<int>(
         "obstacle_detector.min_cluster_points", 8);
+
     RCLCPP_INFO(this->get_logger(),
     "Obstacle detector params: threshold=%.2f min_points=%d",
     cluster_threshold_, min_cluster_points_);
@@ -209,7 +137,7 @@ private:
   rclcpp::Subscription<sensor_msgs::msg::LaserScan>::SharedPtr       scan_sub_;
 
   double cluster_threshold_;
-  int min_cluster_points_;
+  int    min_cluster_points_;
 
   void scanCallback(sensor_msgs::msg::LaserScan::SharedPtr msg)
   {
@@ -221,17 +149,7 @@ private:
         points,
         cluster_threshold_,
         min_cluster_points_);
-
-    // Discard clusters with too few points (noise)
-    // clusters.erase(
-    //   std::remove_if(clusters.begin(), clusters.end(),
-    //     [](const trajectory_controller::Cluster& c) {
-    //       return c.points.size() < min_cluster_points_;// Adjust threshold as needed
-    //     }),
-    //   clusters.end());
-
-    //  trajectory_controller::mergeClusters(clusters);
-
+        
     // Compute centre and radius
     trajectory_controller::computeClusterProperties(clusters);
 

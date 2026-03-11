@@ -1,12 +1,17 @@
 #include <rclcpp/rclcpp.hpp>
 #include <visualization_msgs/msg/marker_array.hpp>
 #include "trajectory_controller/types.hpp"
+#include "trajectory_controller/viz_utils.hpp"
 #include <geometry_msgs/msg/point.hpp>
 #include <vector>
 
 
 namespace trajectory_controller
 {
+
+// Catmull-Rom spline interpolation between waypoints.
+// For each segment [p1,p2], we use the neighbouring points p0 and p3
+// to compute a smooth curve that passes through every waypoint 
 
     std::vector<Point2D> catmullRomSpline( 
         const std::vector<Point2D>& pts,  
@@ -16,11 +21,11 @@ namespace trajectory_controller
             
             for( size_t i = 0 ; i < pts.size() -1;  i ++)
             {
+                // Clamp neighbours at the endpoints instead of wrapping
                 Point2D p0 = pts[i > 0 ? i - 1 : i];
                 Point2D p1 = pts[i];
                 Point2D p2 = pts[i + 1];
                 Point2D p3 = pts[i + 2 < pts.size() ? i + 2 : i + 1];
-
 
                 for(int s = 0 ; s < samples_per_segment;s++){
 
@@ -28,6 +33,7 @@ namespace trajectory_controller
                     double t2 = t * t;
                     double t3 = t2 * t;
 
+                    // Standard Catmull-Rom matrix with alpha = 0.5
                     double x = 0.5 * ((2 * p1.x) + 
                                        (-p0.x + p2.x) * t + 
                                        (2*p0.x - 5*p1.x + 4*p2.x - p3.x) * t2 + 
@@ -37,16 +43,11 @@ namespace trajectory_controller
                                        (-p0.y + p2.y) * t + 
                                        (2*p0.y - 5*p1.y + 4*p2.y - p3.y) * t2 + 
                                        (-p0.y + 3*p1.y - 3*p2.y + p3.y) * t3);
-
+                    
                     result.push_back({x, y});
-
                 }
-
             }
-            
-
             result.push_back(pts.back()); // Ensure the last point is included
-
             return result;
 
         }
@@ -62,6 +63,8 @@ public:
 
         publisher_ = this->create_publisher<visualization_msgs::msg::MarkerArray>("/path_catmullrom", 10);
 
+        samples_ = this->declare_parameter<int>("smoother.samples_per_segment",20);
+
         timer_ = this->create_wall_timer(
             std::chrono::seconds(1),
             [this](){publish();});
@@ -71,44 +74,20 @@ public:
 private: 
     std::vector<trajectory_controller::Point2D> waypoints_;
     rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr publisher_;
-    rclcpp::TimerBase::SharedPtr timer_;    
+    rclcpp::TimerBase::SharedPtr timer_; 
+    int samples_;   
 
     void publish()
     {
-        auto smooth_path = trajectory_controller::catmullRomSpline(waypoints_,20);
+        auto smooth = trajectory_controller::catmullRomSpline(waypoints_, samples_);
 
-        visualization_msgs::msg::MarkerArray marker_array;
-        visualization_msgs::msg::Marker line;
-
-        line.header.frame_id = "odom";
-        line.header.stamp = this->now();
-        line.ns = "catmull_rom_path";
-        line.id = 0;        
-        line.type = visualization_msgs::msg::Marker::LINE_STRIP;
-        line.action = visualization_msgs::msg::Marker::ADD;
-        line.scale.x = 0.05; // Line width
-        line.color.a = 1.0; // Alpha
-        line.color.r = 0.0; // Red
-        line.color.g = 0.5; // Green
-        line.color.b = 1.0; // Blue
-        line.pose.orientation.w = 1.0; // No rotation
-
-        for(const auto& point : smooth_path)
-        {
-            geometry_msgs::msg::Point p;
-            p.x = point.x;
-            p.y = point.y;
-            p.z = 0.0;
-            line.points.push_back(p);
-        }
-
-        marker_array.markers.push_back(line);
-        publisher_->publish(marker_array);
-        
+        // Light blue — visually distinct from Bezier (red) and gradient (orange)
+        auto arr = trajectory_controller::pathToMarkerArray(
+        smooth, "catmull_rom_path", 0, 0.0f, 0.5f, 1.0f);
+           
+        arr.markers[0].header.stamp = this->now();
+        publisher_->publish(arr);
     }
-
-
-
 };
 
 

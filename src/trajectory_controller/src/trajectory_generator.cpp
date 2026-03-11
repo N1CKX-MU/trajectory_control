@@ -1,14 +1,14 @@
 #include <rclcpp/rclcpp.hpp>
 #include <nav_msgs/msg/path.hpp>
 #include <geometry_msgs/msg/pose_stamped.hpp>
-#include <vector>   
-#include <visualization_msgs/msg/marker_array.hpp>
-#include "trajectory_controller/types.hpp"
 #include <std_msgs/msg/float64_multi_array.hpp>
+#include <visualization_msgs/msg/marker_array.hpp>
 #include <tf2/LinearMath/Quaternion.h>
-#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
+#include <vector>
 #include <cmath>
 #include <algorithm>
+#include "trajectory_controller/types.hpp"
 
 
 typedef struct{
@@ -22,7 +22,11 @@ typedef struct{
 
 namespace trajectory_controller
 {
-    std::vector<Point2D> catmullRomSpline( 
+
+// Catmull Rom Spline - suplicated here so this is self contained 
+// and doesnt depend oon catmull.cpp
+
+    static std::vector<Point2D> catmullRomSpline( 
         const std::vector<Point2D>& pts,  
         int samples_per_segment = 10)
     {
@@ -65,11 +69,18 @@ namespace trajectory_controller
 
     }
 
+// Generates a time-parametrized trajectory from a smooth path
+// Velocity is assigned using trapezoidal profile
+// it ramps up and then cruises and then slows down to rest 
+// Each point gets a timestamp based on the average velocity over each segment
+
     std::vector<TrajectoryPoint> generateTrajectory(
         const std::vector<Point2D>& path,
         double max_velocity,
         double acceleration)
     {
+
+        // Compute cumulative arc length along the path
         std::vector<double> arc_length(path.size(),0.0);
         for(size_t i = 1 ; i < path.size();i++){
             double dx = path[i].x - path[i-1].x;
@@ -90,6 +101,8 @@ namespace trajectory_controller
             tp.x = path[i].x;
             tp.y = path[i].y;
 
+            // Heading points towards the next point, last point keeps prev heading
+
             if(i < path.size() - 1){
                 tp.theta = std::atan2(
                     path[i+1].y - path[i].y,
@@ -100,6 +113,8 @@ namespace trajectory_controller
             }else{
                 tp.theta = 0.0;
             }
+
+            // Trapezoidal profile 
             
             double s = arc_length[i];
             double v_ramp_up = std::sqrt(2.0 * acceleration * s);
@@ -117,15 +132,12 @@ namespace trajectory_controller
                 time_acc += ds / v_avg;
                 tp.time = time_acc;
             }
-
             trajectory.push_back(tp);
-
         }
-
         return trajectory;
     }
     
-}
+}// namespace trajectory_controller
 
 
 class TrajectoryGeneratorNode : public rclcpp::Node
@@ -134,20 +146,15 @@ public:
     TrajectoryGeneratorNode() : Node("trajectory_generator_node")
     {
         waypoints_ = trajectory_controller::getWaypoints(this);
-
         publisher_ = this->create_publisher<nav_msgs::msg::Path>("/trajectory_points", 10);
-
         vel_pub_ = this->create_publisher<std_msgs::msg::Float64MultiArray>("/trajectory_velocities", 10); 
 
         samples_per_segment_ =
             this->declare_parameter<int>("smoother.samples_per_segment", 20);
-
         max_velocity_ =
             this->declare_parameter<double>("trajectory.max_velocity", 0.18);
-
         acceleration_ =
             this->declare_parameter<double>("trajectory.acceleration", 0.05);
-
 
         timer_ = this->create_wall_timer(
             std::chrono::seconds(1),
@@ -161,10 +168,10 @@ public:
     }
 private: 
 
-    std::vector<trajectory_controller::Point2D> waypoints_;
-    rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr publisher_;
+    std::vector<trajectory_controller::Point2D>                    waypoints_;
+    rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr              publisher_;
     rclcpp::Publisher<std_msgs::msg::Float64MultiArray>::SharedPtr vel_pub_;
-    rclcpp::TimerBase::SharedPtr timer_;
+    rclcpp::TimerBase::SharedPtr                                   timer_;
 
     int samples_per_segment_;
     double max_velocity_;
@@ -184,7 +191,6 @@ private:
         nav_msgs::msg::Path path_msg;
         path_msg.header.frame_id = "odom";
         path_msg.header.stamp = this->now();
-
 
         std_msgs::msg::Float64MultiArray vel_msg;
 
@@ -211,7 +217,6 @@ private:
 
     }
 };
-
 
 int main(int argc, char **argv)
 {

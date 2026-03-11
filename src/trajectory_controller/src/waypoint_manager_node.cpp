@@ -5,6 +5,11 @@
 #include "trajectory_controller/msg/segment.hpp"
 #include <vector>
 
+
+// Owns the global waypoint list and drives the segment-by-segment replanning loop
+// Instead of handing all the waypoints to theavoider at once , this node publishes
+// one segment at a time - start to next waypoint iteratively
+// this ensures robot always plans over short enough segments that all obstacles are within
 class WaypointManagerNode : public rclcpp::Node
 {
 public:
@@ -19,6 +24,7 @@ public:
     done_pub_ = this->create_publisher<std_msgs::msg::Bool>(
       "/mission_complete", 10);
 
+    // Controller publishes the indec of the segment it just completed
     waypoint_reached_sub_ = this->create_subscription<std_msgs::msg::Int32>(
       "/waypoint_reached", 10,
       [this](std_msgs::msg::Int32::SharedPtr msg) {
@@ -82,6 +88,7 @@ private:
 
   void waypointReachedCallback(std_msgs::msg::Int32::SharedPtr msg)
   {
+    //Ignore stale confirmations from prev segments
     if (msg->data != current_segment_) {
       return;
     }
@@ -91,7 +98,8 @@ private:
       "Waypoint %d reached, advancing to segment %d",
       msg->data, current_segment_);
 
-    // Short delay then publish next segment
+
+    // Brief pause before publishing the next segment, giving time to clear prev path
     timer_ = this->create_wall_timer(
       std::chrono::milliseconds(500),
       [this]() {

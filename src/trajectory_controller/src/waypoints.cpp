@@ -5,42 +5,18 @@
 #include "trajectory_controller/types.hpp"
 
 
-
-typedef struct{
-    double x;
-    double y;
-}Point2D;
-
-
+//Publishes the raw waypoints as RViz markers to visualize
+// input points before any smoothening 
 class Waypoints : public rclcpp::Node
 {
 public:
     Waypoints() : Node("waypoints_node")
     {
-    //     waypoints_ = {
-    //   {0.0, 0.0},
-    //   {1.0, 0.5},
-    //   {2.0, 1.5},
-    //   {3.0, 1.0},
-    //   {4.0, 2.0},
-    //   {5.0, 1.0},
-    //   {6.0, 0.0}
-    // };
-
-    //  waypoints_ ={  // upside down V shaped trajectory 
-    //     {0.0, 0.0},  //← start
-    //     {1.0, 0.5},
-    //     {2.0, 2.0},
-    //     {3.0, 2.5},
-    //     {4.0, 1.5},
-    //     {5.0, 0.5},
-    //     {6.0, 1.0}  //← end
-    // };
-
     waypoints_ = trajectory_controller::getWaypoints(this);
 
     publisher_ = this->create_publisher<visualization_msgs::msg::MarkerArray>("/waypoints", 10);
 
+    // Republish every second so rviz can pick it up 
     timer_ = this->create_wall_timer(
         std::chrono::seconds(1),
         [this](){publishMarker(); });
@@ -50,21 +26,20 @@ public:
 
     }
 
-    
-
 private:
     std::vector<trajectory_controller::Point2D> waypoints_;
     rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr publisher_;
     rclcpp::TimerBase::SharedPtr timer_;
 
-
     void publishMarker()
     {
         visualization_msgs::msg::MarkerArray marker_array;
 
+        
         for (size_t i = 0 ; i < waypoints_.size();i++){
             visualization_msgs::msg::Marker marker;
 
+            // describing a sphere marker for every [Point]
             marker.header.frame_id = "odom";
             marker.header.stamp = this->now();
             marker.ns = "waypoints";
@@ -90,7 +65,7 @@ private:
             marker_array.markers.push_back(marker);
         }
 
-
+        // Connect the waypoints with a line
         visualization_msgs::msg::Marker line;
         line.header.frame_id = "odom";
         line.header.stamp = this->now();
@@ -115,10 +90,6 @@ private:
         }
 
         marker_array.markers.push_back(line);
-
-        
-
-
         publisher_->publish(marker_array);
     }
 };
