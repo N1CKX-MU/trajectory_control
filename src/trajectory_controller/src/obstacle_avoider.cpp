@@ -4,6 +4,8 @@
 #include "trajectory_controller/types.hpp"
 #include <cmath>
 #include <vector>
+#include "trajectory_controller/msg/segment.hpp"
+#include <std_msgs/msg/bool.hpp>
 
 namespace trajectory_controller
 {
@@ -137,6 +139,19 @@ public:
       std::chrono::seconds(1),
       [this]() { publish(); });
 
+    segment_sub_ = this->create_subscription<trajectory_controller::msg::Segment>(
+      "/current_segment", 10,
+      [this](trajectory_controller::msg::Segment::SharedPtr msg) {
+        current_segment_ = *msg;
+        segment_received_ = true;
+        path_computed_ = false;  // recompute path for new segment
+        RCLCPP_INFO(this->get_logger(),
+          "Received segment %d: (%.2f,%.2f) -> (%.2f,%.2f)",
+          msg->segment_index,
+          msg->start_x, msg->start_y,
+          msg->goal_x, msg->goal_y);
+      });
+
     
     samples_ = this->declare_parameter<int>(
         "smoother.samples_per_segment", 20);
@@ -165,6 +180,11 @@ private:
     rclcpp::Subscription<visualization_msgs::msg::MarkerArray>::SharedPtr obstacle_sub_;
     rclcpp::TimerBase::SharedPtr timer_;
 
+    bool path_computed_{false};
+    trajectory_controller::msg::Segment current_segment_;
+    bool segment_received_{false};
+    rclcpp::Subscription<trajectory_controller::msg::Segment>::SharedPtr segment_sub_;
+
     double alpha_;
     double learning_rate_;
     int iterations_;
@@ -189,10 +209,37 @@ private:
 
   void publish()
   {
-    // Get smooth path
-    auto smooth = trajectory_controller::catmullRomSmooth(
-        waypoints_,
-        samples_);
+
+
+    if (obstacles_.empty()) {
+      RCLCPP_INFO_THROTTLE(this->get_logger(),
+        *this->get_clock(), 2000, "Waiting for obstacle detections...");
+      return;
+    }
+
+    if (!segment_received_) {
+      RCLCPP_INFO_THROTTLE(this->get_logger(),
+        *this->get_clock(), 2000, "Waiting for segment...");
+      return;
+    }
+
+    if (path_computed_) {
+      return;
+    }
+
+    // Build two-point path for this segment
+    // Build segment path with intermediate points for smoother avoidance
+    std::vector<trajectory_controller::Point2D> segment_path;
+    int n_interp = 5;
+    for (int i = 0; i <= n_interp; i++) {
+      double t = static_cast<double>(i) / n_interp;
+      segment_path.push_back({
+        current_segment_.start_x + t * (current_segment_.goal_x - current_segment_.start_x),
+        current_segment_.start_y + t * (current_segment_.goal_y - current_segment_.start_y)
+      });
+    }
+
+    auto smooth = segment_path;  // already interpolated, no need for catmull on 2 points
 
     // Deform around detected obstacles
     auto safe = trajectory_controller::avoidObstacles(
@@ -230,6 +277,7 @@ private:
 
     arr.markers.push_back(line);
     path_pub_->publish(arr);
+    path_computed_ = true;
   }
 };
 

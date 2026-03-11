@@ -1,18 +1,17 @@
+import os
 from launch import LaunchDescription
 from launch.actions import IncludeLaunchDescription, TimerAction
 from launch.launch_description_sources import PythonLaunchDescriptionSource
-from launch_ros.actions import Node
-from ament_index_python.packages import get_package_share_directory
 from launch.substitutions import PathJoinSubstitution
+from launch_ros.actions import Node
 from launch_ros.substitutions import FindPackageShare
-import os
+from ament_index_python.packages import get_package_share_directory
 
 
 def generate_launch_description():
-
-    tb3_gazebo= get_package_share_directory('turtlebot3_gazebo')
+    tb3_gazebo     = get_package_share_directory('turtlebot3_gazebo')
     pkg_gazebo_ros = get_package_share_directory('gazebo_ros')
-    pkg_share = get_package_share_directory('trajectory_controller')
+    pkg_share      = get_package_share_directory('trajectory_controller')
     params_file    = os.path.join(pkg_share, 'config', 'params.yaml')
 
     gazebo = IncludeLaunchDescription(
@@ -44,6 +43,7 @@ def generate_launch_description():
         launch_arguments={'x_pose': '0.0', 'y_pose': '0.0'}.items()
     )
 
+    # ── Visualisation nodes (start early, no dependency on robot) ──
     waypoints = TimerAction(period=5.0, actions=[
         Node(package='trajectory_controller',
              executable='waypoints_node',
@@ -84,30 +84,6 @@ def generate_launch_description():
              parameters=[params_file])
     ])
 
-    detector = TimerAction(period=6.0, actions=[
-        Node(package='trajectory_controller',
-             executable='obstacle_detector_node',
-             name='obstacle_detector_node',
-             output='screen',
-             parameters=[params_file])
-    ])
-
-    avoider = TimerAction(period=7.0, actions=[
-        Node(package='trajectory_controller',
-             executable='obstacle_avoider_node',
-             name='obstacle_avoider_node',
-             output='screen',
-             parameters=[params_file])
-    ])
-
-    controller = TimerAction(period=15.0, actions=[
-        Node(package='trajectory_controller',
-             executable='controller_node',
-             name='controller_node',
-             output='screen',
-             parameters=[params_file])
-    ])
-
     rviz = TimerAction(period=5.0, actions=[
         Node(package='rviz2',
              executable='rviz2',
@@ -117,6 +93,42 @@ def generate_launch_description():
                  'rviz', 'visualize_trajectory.rviz'
              ])],
              output='screen')
+    ])
+
+    # ── Obstacle pipeline (needs LiDAR — start after robot spawned) ──
+    detector = TimerAction(period=7.0, actions=[
+        Node(package='trajectory_controller',
+             executable='obstacle_detector_node',
+             name='obstacle_detector_node',
+             output='screen',
+             parameters=[params_file])
+    ])
+
+    # ── Waypoint manager — publishes first segment after 2s internal delay ──
+    waypoint_manager = TimerAction(period=8.0, actions=[
+        Node(package='trajectory_controller',
+             executable='waypoint_manager_node',
+             name='waypoint_manager_node',
+             output='screen',
+             parameters=[params_file])
+    ])
+
+    # ── Avoider — waits for segment + obstacles before computing path ──
+    avoider = TimerAction(period=8.0, actions=[
+        Node(package='trajectory_controller',
+             executable='obstacle_avoider_node',
+             name='obstacle_avoider_node',
+             output='screen',
+             parameters=[params_file])
+    ])
+
+    # ── Obstacle-aware controller — waits for avoided path per segment ──
+    controller = TimerAction(period=8.0, actions=[
+        Node(package='trajectory_controller',
+             executable='controller_obstacles_node',
+             name='controller_obstacles_node',
+             output='screen',
+             parameters=[params_file])
     ])
 
     return LaunchDescription([
@@ -129,8 +141,9 @@ def generate_launch_description():
         bezier,
         gradient,
         trajectory,
+        rviz,
         detector,
+        waypoint_manager,
         avoider,
         controller,
-        rviz,
     ])

@@ -1,6 +1,6 @@
 
 cmake_minimum_required(VERSION 3.14)
-project(trajectory_controller VERSION 0.1.0 LANGUAGES CXX)
+project(trajectory_controller VERSION 0.1.0 LANGUAGES C CXX)
 
 # ── Compiler settings ─────────────────────────────────────────────
 set(CMAKE_CXX_STANDARD 17)
@@ -20,6 +20,17 @@ find_package(tf2_ros REQUIRED)
 find_package(tf2_geometry_msgs REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
+
+
+find_package(rosidl_default_generators REQUIRED)
+
+rosidl_generate_interfaces(${PROJECT_NAME}
+  "msg/Segment.msg"
+  DEPENDENCIES std_msgs
+)
+
+rosidl_get_typesupport_target(cpp_typesupport_target
+  ${PROJECT_NAME} rosidl_typesupport_cpp)
 
 # ── Common include directory ──────────────────────────────────────
 set(PROJECT_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
@@ -58,7 +69,7 @@ ament_target_dependencies(obstacle_avoider_node
   rclcpp visualization_msgs geometry_msgs
 )
 target_include_directories(obstacle_avoider_node PUBLIC ${PROJECT_INCLUDE_DIR})
-
+target_link_libraries(obstacle_avoider_node "${cpp_typesupport_target}")
 # ── Node: Trajectory Generator ────────────────────────────────────
 add_executable(trajectory_generator_node src/trajectory_generator.cpp)
 ament_target_dependencies(trajectory_generator_node
@@ -74,7 +85,7 @@ ament_target_dependencies(controller_node
   tf2 tf2_ros tf2_geometry_msgs visualization_msgs
 )
 target_include_directories(controller_node PUBLIC ${PROJECT_INCLUDE_DIR})
-
+target_link_libraries(controller_node "${cpp_typesupport_target}")
 # ── Node: Obstacle Detector ───────────────────────────────────────
 add_executable(obstacle_detector_node src/obstacle_detector.cpp)
 ament_target_dependencies(obstacle_detector_node
@@ -82,6 +93,24 @@ ament_target_dependencies(obstacle_detector_node
   tf2 tf2_ros tf2_geometry_msgs
 )
 target_include_directories(obstacle_detector_node PUBLIC ${PROJECT_INCLUDE_DIR})
+
+
+# ── Node: Waypoint Manager ────────────────────────────────────────
+add_executable(waypoint_manager_node src/waypoint_manager_node.cpp)
+ament_target_dependencies(waypoint_manager_node
+  rclcpp std_msgs
+)
+target_include_directories(waypoint_manager_node PUBLIC ${PROJECT_INCLUDE_DIR})
+target_link_libraries(waypoint_manager_node "${cpp_typesupport_target}")
+
+# ── Node: Controller (Obstacle-aware) ────────────────────────────
+add_executable(controller_obstacles_node src/controller_obstacles.cpp)
+ament_target_dependencies(controller_obstacles_node
+  rclcpp geometry_msgs nav_msgs std_msgs
+  tf2 tf2_ros tf2_geometry_msgs visualization_msgs
+)
+target_include_directories(controller_obstacles_node PUBLIC ${PROJECT_INCLUDE_DIR})
+target_link_libraries(controller_obstacles_node "${cpp_typesupport_target}")
 
 # ── Install all executables together ──────────────────────────────
 install(TARGETS
@@ -93,6 +122,8 @@ install(TARGETS
   trajectory_generator_node
   controller_node
   obstacle_detector_node
+  waypoint_manager_node
+  controller_obstacles_node
   DESTINATION lib/${PROJECT_NAME}
 )
 
@@ -102,6 +133,7 @@ install(DIRECTORY
   config
   worlds
   rviz
+  msg
   DESTINATION share/${PROJECT_NAME}
 )
 

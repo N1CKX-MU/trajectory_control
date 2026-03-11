@@ -16,7 +16,7 @@ trajectory_controller:
     # ── Trajectory Generator ────────────────────────────────────
     trajectory:
       max_velocity: 0.18          # m/s — Turtlebot3 Burger limit
-      acceleration: 0.05          # m/s² — trapezoidal ramp rate
+      acceleration: 0.15          # m/s² — trapezoidal ramp rate
 
     # ── Pure Pursuit Controller ─────────────────────────────────
     controller:
