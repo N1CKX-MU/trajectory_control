@@ -9,7 +9,7 @@ Implements three path smoothing algorithms (Catmull-Rom, Bezier, Gradient Descen
 ## Demo
 
 ```bash
-git clone <your-repo-url>
+git clone https://github.com/N1CKX-MU/trajectory_control.git
 cd trajectory_control
 xhost +local:docker
 make docker        # starts container and drops you inside
@@ -50,7 +50,10 @@ trajectory_control/
         ├── config/
         │   └── params.yaml                 # all tunable parameters
         ├── include/trajectory_controller/
-        │   └── types.hpp                   # shared structs + waypoint loader
+        │   ├── types.hpp                   # shared structs + waypoint loader
+        |   └── viz_utils.hpp
+        ├── msg/
+        │   └── segment.msg
         ├── launch/
         │   ├── demo.launch.py              # full demo (Gazebo + all nodes + RViz2)
         │   ├── demo_with_obstacles.launch.py  # demo with obstacle avoidance
@@ -67,6 +70,7 @@ trajectory_control/
         │   ├── obstacle_detector.cpp       # LiDAR clustering → obstacle positions
         │   └── obstacle_avoider.cpp        # path deformation around obstacles
         ├── test/
+        │   └──test_smoother.cpp
         └── worlds/
             └── obstacle_course.world       # Gazebo world with cylindrical obstacles
 ```
@@ -115,25 +119,25 @@ make demo_obstacles
 ┌─────────────────────────────────────────────────────────┐
 │                     ROS2 Node Graph                     │
 │                                                         │
-│  waypoints_node  ──→  /waypoints                        │
-│  catmullrom_node ──→  /path_catmullrom   (blue)         │
-│  bezier_node     ──→  /path_bezier       (red)          │
-│  gradient_node   ──→  /path_gradient     (cyan)         │
+│  waypoints_node  ──>  /waypoints                        │
+│  catmullrom_node ──>  /path_catmullrom   (blue)         │
+│  bezier_node     ──>  /path_bezier       (red)          │
+│  gradient_node   ──>  /path_gradient     (cyan)         │
 │                                                         │
-│  trajectory_generator_node ──→ /trajectory              │
+│  trajectory_generator_node ──> /trajectory              │
 │                                                         │
-│  obstacle_detector_node  ←── /scan (LiDAR)              │
-│                         ──→ /detected_obstacles          │
+│  obstacle_detector_node  <── /scan (LiDAR)              │
+│                         ──> /detected_obstacles         │
 │                                                         │
-│  obstacle_avoider_node  ←── /path_catmullrom            │
-│                         ←── /detected_obstacles          │
-│                         ──→ /path_avoiding   (purple)   │
+│  obstacle_avoider_node  <── /path_catmullrom            │
+│                         <── /detected_obstacles         │
+│                         ──> /path_avoiding   (purple)   │
 │                                                         │
-│  controller_node  ←── /odom                             │
-│                   ←── /path_avoiding                    │
-│                   ──→ /cmd_vel                           │
-│                   ──→ /actual_path                       │
-│                   ──→ /tracking_error                    │
+│  controller_node  <── /odom                             │
+│                   <── /path_avoiding                    │
+│                   ──> /cmd_vel                          │
+│                   ──> /actual_path                      │
+│                   ──> /tracking_error                   │
 └─────────────────────────────────────────────────────────┘
 ```
 
