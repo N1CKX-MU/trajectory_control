@@ -131,6 +131,85 @@ make graph_compare
 ```
 ![OUTPUT of make graph_compare](images/visualize_curves.png)
 
+## Configuration
+
+All tunable parameters are in `config/params.yaml`. No recompilation needed — just edit and relaunch.
+
+```yaml
+trajectory_controller:
+  ros__parameters:
+
+    waypoints: [0.0,0.0, 1.0,0.5, 2.0,2.0, 3.0,2.5, 4.0,1.5, 5.0,0.5, 6.0,1.0]
+
+    smoother:
+      samples_per_segment: 20
+      bezier_tension: 0.25
+      gradient_alpha: 0.8
+      gradient_learning_rate: 0.1
+      gradient_iterations: 500
+
+    trajectory:
+      max_velocity: 0.18      # m/s — Turtlebot3 Burger hardware limit
+      acceleration: 0.05      # m/s²
+
+    controller:
+      lookahead_gain: 1.5
+      min_lookahead: 0.15     # metres
+      max_lookahead: 0.60     # metres
+      goal_tolerance: 0.10    # metres
+
+    obstacle_detector:
+      cluster_threshold: 0.25
+      min_cluster_points: 8
+
+    obstacle_avoider:
+      safe_margin: 0.45       # metres beyond obstacle radius
+```
+
+---
+
+## RViz2 Topics
+
+| Topic | Type | Description |
+|-------|------|-------------|
+| `/waypoints` | MarkerArray | Green spheres + yellow connecting line |
+| `/path_catmullrom` | MarkerArray | Blue smooth curve |
+| `/path_bezier` | MarkerArray | Red smooth curve |
+| `/path_gradient` | MarkerArray | Orange smooth curve |
+| `/trajectory` | Path | Reference trajectory with heading arrows |
+| `/actual_path` | Path | Robot's actual travelled path |
+| `/detected_obstacles` | MarkerArray | Red cylinders at detected obstacle positions |
+| `/path_avoiding` | MarkerArray | Purple obstacle-avoided path |
+| `/odom` | Odometry | Robot pose |
+
+---
+
+## Makefile Reference
+
+### Host (run from `~/trajectory_control/`)
+
+| Command | Description |
+|---------|-------------|
+| `make docker` | Start container and attach shell |
+| `make docker-build` | Rebuild Docker image |
+| `make docker-down` | Stop and remove container |
+
+### Container (run from `/ros2_ws/src/trajectory_controller/`)
+
+| Command | Description |
+|---------|-------------|
+| `make build` | Build the ROS2 package & source the ws|
+| `make demo` | Full demo -> Gazebo + all nodes + RViz2 |
+| `make demo_obstacles` | Demo with obstacle avoidance |
+| `make graph_compare` | Smoother comparison -> no Gazebo, no robot, just RViz |
+| `make controller` | Run controller node only |
+| `make topics` | List all active ROS2 topics |
+| `make nodes` | List all active ROS2 nodes |
+| `make tf` | Visualise TF tree |
+
+---
+
+
 ## Troubleshooting
 
 **Gazebo hangs on startup**
@@ -151,3 +230,4 @@ Start `obstacle_detector_node` and `obstacle_avoider_node` before the controller
 
 
 ---
+
