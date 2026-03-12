@@ -3,7 +3,7 @@
 #include <vector>
 #include "trajectory_controller/types.hpp"
 
-// ─── Copy algorithm functions here for testing ───────────────────────────────
+
 // (same functions from nodes, pulled into test scope)
 
 namespace trajectory_controller
